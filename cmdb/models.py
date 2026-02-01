@@ -26,9 +26,5 @@ class DynamicNode(StructuredNode):
 
         new_class = type(class_name, (cls,), attrs)
 
-        # Optional: install labels (constraints/indexes)
-        from neomodel import install_labels
-        install_labels(new_class)
-
         _LABEL_REGISTRY[label_name] = new_class
         return new_class

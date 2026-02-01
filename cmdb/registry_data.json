@@ -2,18 +2,19 @@
   "Site": {
     "display_name": "Site / Location",
     "properties": [
-      "name"
+      "name",
+      "address",
+      "city",
+      "state",
+      "postal_code",
+      "country"
     ],
     "required": [
       "name"
     ],
     "relationships": {
-      "contains": {
-        "target": "Device",
-        "direction": "out"
-      },
-      "hosts": {
-        "target": "Rack",
+      "owner": {
+        "target": "Person",
         "direction": "out"
       }
     }
@@ -54,7 +55,7 @@
       }
     }
   },
-  "Virtual Machine": {
+  "Virtual_Machine": {
     "display_name": "Virtual Machine",
     "description": "",
     "required_properties": [

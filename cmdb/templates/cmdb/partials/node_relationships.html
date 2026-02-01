@@ -16,9 +16,14 @@
             <li class="text-sm">
                 <strong>{{ rel_type }}</strong> → 
                 {% for t in targets %}
-                    <span class="text-indigo-600">
-                        {{ t.target_label }} ({{ t.target_id|truncatechars:8 }}...)
-                    </span>
+                    <a href="{% url 'cmdb:node_detail' t.target_label t.target_id %}"
+                       class="text-indigo-600 hover:text-indigo-800 underline">
+                        {% if t.target_name %}
+                            {{ t.target_name }} ({{ t.target_id|truncatechars:8 }}...)
+                        {% else %}
+                            {{ t.target_id|truncatechars:12 }}...
+                        {% endif %}
+                    </a>
                     <button hx-post="{% url 'cmdb:node_disconnect' label element_id %}"
                             hx-vars='{ "rel_type": "{{ rel_type }}", "target_id": "{{ t.target_id }}", "target_label": "{{ t.target_label }}" }'
                             hx-target="#relationships-section"

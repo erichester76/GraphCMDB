@@ -19,8 +19,8 @@ def type_register(request):
                 types_data.append({
                     'label': label,
                     'display_name': meta.get('display_name', '-'),
-                    'required_properties': ', '.join(meta.get('required_properties', [])) or '-',
-                    'optional_properties': ', '.join(meta.get('optional_properties', [])) or '-',
+                    'required': ', '.join(meta.get('required', [])) or '-',
+                    'properties': ', '.join(meta.get('properties', [])) or '-',
                     'description': meta.get('description', '-'),
                 })
 
@@ -160,7 +160,6 @@ def node_detail(request, label, element_id):
         raw_node = result[0][0]
         node = node_class.inflate(raw_node)
 
-        # Pre-process properties for display
         props_list = []
         for key, value in (node.custom_properties or {}).items():
             props_list.append({
@@ -169,21 +168,30 @@ def node_detail(request, label, element_id):
                 'value_type': type(value).__name__,
             })
 
+        rels_query = f"""
+            MATCH (n:`{label}`) WHERE elementId(n) = $eid
+            MATCH (n)-[r]->(m)
+            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
+                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
+        """
+        rels_result, _ = db.cypher_query(rels_query, {'eid': element_id})
+
         rels = {}
-        for attr in dir(node):
-            if attr.isupper() and not attr.startswith('_'):
-                rel = getattr(node, attr)
-                if hasattr(rel, 'all'):
-                    rels[attr] = [
-                        {'target_id': t.element_id, 'target_label': t.__label__}
-                        for t in rel.all()
-                    ]
+        for row in rels_result:
+            rel_type = row[0]
+            if rel_type not in rels:
+                rels[rel_type] = []
+            rels[rel_type].append({
+                'target_id': row[1],
+                'target_label': row[2],
+                'target_name': row[3] or row[1][:12] + '...',
+            })
 
         context = {
             'label': label,
             'element_id': element_id,
             'node': node,
-            'properties_list': props_list,  # ← new
+            'properties_list': props_list,
             'relationships': rels,
             'all_labels': TypeRegistry.known_labels(),
         }
@@ -355,133 +363,150 @@ def node_create(request, label):
         }
 
         if request.method == 'GET':
-            # Pre-fill form fields (empty values)
+            # Build dynamic fields from registry
+            required_props = meta.get('required', [])
+            props = meta.get('properties', [])
+
             form_fields = []
-            for key in context['all_props']:
+            
+            for key in props:
                 form_fields.append({
                     'key': key,
-                    'value': '',  # empty
-                    'type': 'text',  # default, can infer later
+                    'value': '',
+                    'type': 'text',
                     'input_name': f'prop_{key}',
                     'required': key in required_props,
                 })
-            context['form_fields'] = form_fields
+                
+            print("Creating form for label:", label)
+            print("Meta from registry:", meta)
+            print("Props:", props)
+            print("Required props:", required_props)
+            print("Form fields built:", form_fields)
+            
+            context = {
+                'label': label,
+                'csrf_token': get_token(request),
+                'form_fields': form_fields,
+            }
             return render(request, 'cmdb/partials/node_create_form.html', context)
 
-        # POST: process creation
-        new_props = {}
-        for key, value in request.POST.items():
-            if key.startswith('prop_'):
-                prop_key = key[5:]
-                # Type coercion
-                if value.lower() in ('true', 'false'):
-                    new_props[prop_key] = value.lower() == 'true'
-                elif value.replace('.', '', 1).replace('-', '', 1).isdigit():
-                    if '.' in value:
-                        new_props[prop_key] = float(value)
+        # POST handling
+        try:
+            properties_str = request.POST.get('properties', '').strip()
+
+            # Parse raw JSON if provided
+            raw_json_dict = {}
+            if properties_str:
+                try:
+                    raw_json_dict = json.loads(properties_str)
+                    if not isinstance(raw_json_dict, dict):
+                        raise ValueError("Raw JSON must be a dict/map")
+                except json.JSONDecodeError as e:
+                    return render(request, 'cmdb/partials/node_create_form.html', {
+                        'label': label,
+                        'error': f'Invalid raw JSON: {str(e)}',
+                        'form_fields': form_fields,
+                    })
+
+            # Collect field values (prop_*)
+            new_props_from_fields = {}
+            for key, value in request.POST.items():
+                if key.startswith('prop_'):
+                    prop_key = key[5:]
+                    # Type coercion
+                    if value.lower() in ('true', 'false'):
+                        new_props_from_fields[prop_key] = value.lower() == 'true'
+                    elif value.replace('.', '', 1).replace('-', '', 1).isdigit():
+                        if '.' in value:
+                            new_props_from_fields[prop_key] = float(value)
+                        else:
+                            new_props_from_fields[prop_key] = int(value)
                     else:
-                        new_props[prop_key] = int(value)
-                else:
-                    new_props[prop_key] = value
+                        new_props_from_fields[prop_key] = value
 
-        # Validate required fields
-        missing = [r for r in required_props if r not in new_props]
-        if missing:
-            context['error'] = f"Missing required properties: {', '.join(missing)}"
-            return render(request, 'cmdb/partials/node_create_form.html', context)
+            # Merge raw JSON (base) + fields (override)
+            new_props = raw_json_dict
+            new_props.update(new_props_from_fields)
 
-        # Save
-        node_class = DynamicNode.get_or_create_label(label)
-        node = node_class(custom_properties=new_props).save()
+            # Validate required
+            meta = TypeRegistry.get_metadata(label)
+            required = meta.get('required_properties', [])
+            missing = [r for r in required if r not in new_props]
+            if missing:
+                return render(request, 'cmdb/partials/node_create_form.html', {
+                    'label': label,
+                    'error': f"Missing required properties: {', '.join(missing)}",
+                    'form_fields': form_fields,
+                })
 
-        return render(request, 'cmdb/partials/create_success.html', {
-            'message': f"{label} created with ID {node.element_id}"
-        })
 
+            print("Type of custom_properties before save:", type(new_props))
+            print("new_props before save:", new_props)
+            
+            # Save as dict (not string)
+            node_class = DynamicNode.get_or_create_label(label)
+            node = node_class(custom_properties=new_props).save()  
+
+            # Success
+            return render(request, 'cmdb/partials/create_success.html', {
+                'message': f"{label} created with ID {node.element_id}"
+            })
+
+        except Exception as e:
+            return render(request, 'cmdb/partials/node_create_form.html', {
+                'label': label,
+                'error': str(e),
+                'form_fields': form_fields,
+            })
+            
+            
     except Exception as e:
         context['error'] = str(e)
         return render(request, 'cmdb/partials/node_create_form.html', context)
-    
-@require_http_methods(["POST"])
+
+@require_http_methods(["POST"]) 
 def node_connect(request, label, element_id):
     try:
-        node_class = DynamicNode.get_or_create_label(label)
-
-        # Load source node
-        query = f"""
-            MATCH (n:`{label}`)
-            WHERE elementId(n) = $eid
-            RETURN n
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
-            raise node_class.DoesNotExist("Source node not found")
-
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
-
-        rel_type = request.POST.get('rel_type', '').upper()
-        target_label = request.POST.get('target_label', '')
-        target_id = request.POST.get('target_id', '')
+        rel_type = request.POST.get('rel_type', '').strip().upper()
+        target_label = request.POST.get('target_label', '').strip()
+        target_id = request.POST.get('target_id', '').strip()
 
         if not rel_type or not target_label or not target_id:
             raise ValueError("Missing relationship details")
 
-        # Optional validation
-        meta = TypeRegistry.get_metadata(label)
-        allowed_rels = meta.get('relationships', {})
-        if rel_type not in allowed_rels:
-            raise ValueError(f"Invalid relationship type {rel_type} for {label}")
-
-        # Define relationship on the class if missing
-        if not hasattr(node_class, rel_type):
-            from neomodel import RelationshipTo
-            setattr(node_class, rel_type, RelationshipTo(target_label, rel_type))
-
-            # Critical: Re-install labels to register the new relationship
-            from neomodel import install_labels
-            install_labels(node_class)
-
-            # Reload the node instance to reflect the new class attribute
-            # (re-inflate from raw)
-            node = node_class.inflate(raw_node)  # Re-inflate with updated class
-
-        # Get accessor from reloaded instance
-        rel_accessor = getattr(node, rel_type)
-
-        # Load target node
-        target_class = DynamicNode.get_or_create_label(target_label)
-        target_query = f"""
-            MATCH (t:`{target_label}`)
-            WHERE elementId(t) = $tid
-            RETURN t
+        connect_query = f"""
+            MATCH (source:`{label}`) WHERE elementId(source) = $sid
+            MATCH (target:`{target_label}`) WHERE elementId(target) = $tid
+            MERGE (source)-[:`{rel_type}`]->(target)
+            RETURN elementId(source) AS source_id
         """
-        target_result, _ = db.cypher_query(target_query, {'tid': target_id})
-        if not target_result:
-            raise target_class.DoesNotExist(f"Target node {target_id} not found")
+        result, _ = db.cypher_query(connect_query, {'sid': element_id, 'tid': target_id})
+        if not result:
+            raise ValueError("Failed to create relationship")
 
-        raw_target = target_result[0][0]
-        target = target_class.inflate(raw_target)
+        rels_query = f"""
+            MATCH (n:`{label}`) WHERE elementId(n) = $eid
+            MATCH (n)-[r]->(m)
+            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label
+        """
+        rels_result, _ = db.cypher_query(rels_query, {'eid': element_id})
 
-        # Connect
-        rel_accessor.connect(target)
-
-        # Refresh relationships
         rels = {}
-        for attr in dir(node):
-            if attr.isupper() and not attr.startswith('_'):
-                r = getattr(node, attr)
-                if hasattr(r, 'all'):
-                    rels[attr] = [
-                        {'target_id': t.element_id, 'target_label': t.__label__}
-                        for t in r.all()
-                    ]
+        for row in rels_result:
+            rel_type = row[0]
+            if rel_type not in rels:
+                rels[rel_type] = []
+            rels[rel_type].append({
+                'target_id': row[1],
+                'target_label': row[2],
+            })
 
         return render(request, 'cmdb/partials/node_relationships.html', {
             'relationships': rels,
             'element_id': element_id,
             'label': label,
-            'success_message': f"Relationship {rel_type} added"
+            'success_message': f"Relationship '{rel_type}' added"
         })
 
     except Exception as e:
@@ -496,47 +521,58 @@ def node_connect(request, label, element_id):
 @require_http_methods(["POST"])
 def node_disconnect(request, label, element_id):
     try:
-        node_class = DynamicNode.get_or_create_label(label)
-        query = f"MATCH (n:`{label}`) WHERE elementId(n) = $eid RETURN n"
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
-            return JsonResponse({'error': 'Node not found'}, status=404)
+        rel_type = request.POST.get('rel_type', '').strip().upper()
+        target_id = request.POST.get('target_id', '').strip()
+        target_label = request.POST.get('target_label', '').strip()
 
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
+        if not rel_type or not target_id or not target_label:
+            raise ValueError("Missing disconnect details")
 
-        rel_type = request.POST.get('rel_type', '').upper()
-        target_id = request.POST.get('target_id', '')
+        disconnect_query = f"""
+            MATCH (source:`{label}`)-[r:`{rel_type}`]->(target:`{target_label}`)
+            WHERE elementId(source) = $sid AND elementId(target) = $tid
+            DELETE r
+            RETURN count(r) AS deleted
+        """
+        result, _ = db.cypher_query(disconnect_query, {'sid': element_id, 'tid': target_id})
 
-        if not rel_type or not target_id:
-            return JsonResponse({'error': 'Missing disconnect details'}, status=400)
+        deleted = result[0][0] if result else 0
+        if deleted == 0:
+            raise ValueError("Relationship not found")
 
-        if not hasattr(node, rel_type):
-            return JsonResponse({'error': f"No such relationship {rel_type}"}, status=400)
+        rels_query = f"""
+            MATCH (n:`{label}`) WHERE elementId(n) = $eid
+            MATCH (n)-[r]->(m)
+            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label
+        """
+        rels_result, _ = db.cypher_query(rels_query, {'eid': element_id})
 
-        rel = getattr(node, rel_type)
-        target_class = DynamicNode.get_or_create_label(request.POST.get('target_label', ''))
-        target = target_class.nodes.get(element_id=target_id)
-
-        rel.disconnect(target)
-
-        # Return refreshed relationships partial
         rels = {}
-        for attr in dir(node):
-            if attr.isupper() and not attr.startswith('_'):
-                r = getattr(node, attr)
-                if hasattr(r, 'all'):
-                    rels[attr] = [{'target_id': t.element_id, 'target_label': t.__label__} for t in r.all()]
+        for row in rels_result:
+            rel_type = row[0]
+            if rel_type not in rels:
+                rels[rel_type] = []
+            rels[rel_type].append({
+                'target_id': row[1],
+                'target_label': row[2],
+            })
 
         return render(request, 'cmdb/partials/node_relationships.html', {
             'relationships': rels,
             'element_id': element_id,
             'label': label,
+            'success_message': f"Relationship '{rel_type}' removed"
         })
 
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-    
+        rels = {}
+        return render(request, 'cmdb/partials/node_relationships.html', {
+            'relationships': rels,
+            'element_id': element_id,
+            'label': label,
+            'error_message': str(e)
+        })
+        
 @require_http_methods(["GET"])
 def get_target_nodes(request):
     target_label = request.GET.get('target_label', '').strip()

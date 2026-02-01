@@ -48,30 +48,3 @@ if REGISTRY_FILE.exists():
     except Exception as e:
         print(f"Failed to load registry: {e}")
         
-registry.register("Site", {
-    "display_name": "Site / Location",
-    "properties": ["name"],
-    "required": ["name"],
-    "relationships": {
-        "contains": {"target": "Device", "direction": "out"},
-        "hosts": {"target": "Rack", "direction": "out"},
-    },
-})
-
-registry.register("Device", {
-    "display_name": "Device / Server / Network Equipment",
-    "properties": ["name", "ip", "serial", "model"],
-    "required": ["name"],
-    "relationships": {
-        "located_in": {"target": "Site", "direction": "out"},
-    },
-})
-
-registry.register("Rack", {
-    "display_name": "Rack ID",
-    "properties": ["name", "height", "width", "model"],
-    "required": ["name"],
-    "relationships": {
-        "LOCATED_IN": {"target": "Site", "direction": "out"},
-    },
-})
