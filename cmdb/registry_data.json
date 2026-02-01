@@ -37,12 +37,22 @@
     }
   },
   "Rack": {
-    "display_name": "Rack",
-    "description": "",
-    "required_properties": [
+    "display_name": "Rack ID",
+    "properties": [
+      "name",
+      "height",
+      "width",
+      "model"
+    ],
+    "required": [
       "name"
     ],
-    "optional_properties": []
+    "relationships": {
+      "LOCATED_IN": {
+        "target": "Site",
+        "direction": "out"
+      }
+    }
   },
   "Virtual Machine": {
     "display_name": "Virtual Machine",

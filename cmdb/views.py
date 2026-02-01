@@ -7,7 +7,7 @@ from django.template.loader import render_to_string
 from django.middleware.csrf import get_token
 import json
 from django.views.decorators.http import require_http_methods
-from neomodel import db 
+from neomodel import db, RelationshipTo
 
 @require_http_methods(["GET", "POST"])
 def type_register(request):
@@ -406,6 +406,8 @@ def node_create(request, label):
 def node_connect(request, label, element_id):
     try:
         node_class = DynamicNode.get_or_create_label(label)
+
+        # Load source node
         query = f"""
             MATCH (n:`{label}`)
             WHERE elementId(n) = $eid
@@ -418,23 +420,36 @@ def node_connect(request, label, element_id):
         raw_node = result[0][0]
         node = node_class.inflate(raw_node)
 
-        rel_type = request.POST.get('rel_type', '').strip().upper()
-        target_label = request.POST.get('target_label', '').strip()
-        target_id = request.POST.get('target_id', '').strip()
+        rel_type = request.POST.get('rel_type', '').upper()
+        target_label = request.POST.get('target_label', '')
+        target_id = request.POST.get('target_id', '')
 
         if not rel_type or not target_label or not target_id:
             raise ValueError("Missing relationship details")
 
-        # Optional validation (can be strict or removed)
+        # Optional validation
         meta = TypeRegistry.get_metadata(label)
         allowed_rels = meta.get('relationships', {})
         if rel_type not in allowed_rels:
-            raise ValueError(f"Invalid relationship type '{rel_type}' for '{label}'")
+            raise ValueError(f"Invalid relationship type {rel_type} for {label}")
 
-        # Get accessor from instance (now exists because defined at class creation)
+        # Define relationship on the class if missing
+        if not hasattr(node_class, rel_type):
+            from neomodel import RelationshipTo
+            setattr(node_class, rel_type, RelationshipTo(target_label, rel_type))
+
+            # Critical: Re-install labels to register the new relationship
+            from neomodel import install_labels
+            install_labels(node_class)
+
+            # Reload the node instance to reflect the new class attribute
+            # (re-inflate from raw)
+            node = node_class.inflate(raw_node)  # Re-inflate with updated class
+
+        # Get accessor from reloaded instance
         rel_accessor = getattr(node, rel_type)
 
-        # Target node
+        # Load target node
         target_class = DynamicNode.get_or_create_label(target_label)
         target_query = f"""
             MATCH (t:`{target_label}`)
@@ -443,7 +458,7 @@ def node_connect(request, label, element_id):
         """
         target_result, _ = db.cypher_query(target_query, {'tid': target_id})
         if not target_result:
-            raise target_class.DoesNotExist(f"Target node '{target_id}' not found")
+            raise target_class.DoesNotExist(f"Target node {target_id} not found")
 
         raw_target = target_result[0][0]
         target = target_class.inflate(raw_target)
@@ -451,7 +466,7 @@ def node_connect(request, label, element_id):
         # Connect
         rel_accessor.connect(target)
 
-        # Refresh rels section
+        # Refresh relationships
         rels = {}
         for attr in dir(node):
             if attr.isupper() and not attr.startswith('_'):
@@ -466,12 +481,13 @@ def node_connect(request, label, element_id):
             'relationships': rels,
             'element_id': element_id,
             'label': label,
-            'success_message': f"Relationship '{rel_type}' added"
+            'success_message': f"Relationship {rel_type} added"
         })
 
     except Exception as e:
+        rels = {}
         return render(request, 'cmdb/partials/node_relationships.html', {
-            'relationships': {},
+            'relationships': rels,
             'element_id': element_id,
             'label': label,
             'error_message': str(e)

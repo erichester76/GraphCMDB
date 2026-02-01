@@ -66,3 +66,12 @@ registry.register("Device", {
         "located_in": {"target": "Site", "direction": "out"},
     },
 })
+
+registry.register("Rack", {
+    "display_name": "Rack ID",
+    "properties": ["name", "height", "width", "model"],
+    "required": ["name"],
+    "relationships": {
+        "LOCATED_IN": {"target": "Site", "direction": "out"},
+    },
+})
