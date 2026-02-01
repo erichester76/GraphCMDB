@@ -13,7 +13,7 @@
       "name"
     ],
     "relationships": {
-      "owner": {
+      "MANAGED_BY": {
         "target": "Person",
         "direction": "out"
       }
@@ -31,8 +31,8 @@
       "name"
     ],
     "relationships": {
-      "located_in": {
-        "target": "Site",
+      "LOCATED_IN": {
+        "target": "Rack",
         "direction": "out"
       }
     }
@@ -55,12 +55,111 @@
       }
     }
   },
-  "Virtual_Machine": {
-    "display_name": "Virtual Machine",
-    "description": "",
-    "required_properties": [
+  "Person": {
+    "display_name": "Person / Employee",
+    "properties": [
+      "name",
+      "email",
+      "phone"
+    ],
+    "required": [
       "name"
     ],
-    "optional_properties": []
+    "relationships": {}
+  },
+  "Application": {
+    "display_name": "Application / Software",
+    "properties": [
+      "name",
+      "version",
+      "vendor"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {
+      "INSTALLED_ON": {
+        "target": "Device",
+        "direction": "out"
+      }
+    }
+  },
+  "Network": {
+    "display_name": "Network / Subnet",
+    "properties": [
+      "cidr",
+      "gateway",
+      "dns"
+    ],
+    "required": [
+      "cidr"
+    ],
+    "relationships": {
+      "ASSIGNED_TO": {
+        "target": "Device",
+        "direction": "out"
+      }
+    }
+  },
+  "IP_Address": {
+    "display_name": "IP Address",
+    "properties": [
+      "address",
+      "type"
+    ],
+    "required": [
+      "address"
+    ],
+    "relationships": {
+      "PART_OF": {
+        "target": "Network",
+        "direction": "out"
+      }
+    }
+  },
+  "Vendor": {
+    "display_name": "Vendor / Supplier",
+    "properties": [
+      "name",
+      "contact_info"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {}
+  },
+  "Virtual_Machine": {
+    "display_name": "Virtual Machine",
+    "properties": [
+      "name",
+      "host",
+      "os"
+    ],
+    "required": [
+      "name",
+      "host"
+    ],
+    "relationships": {
+      "HOSTED_ON": {
+        "target": "Virtual_Cluster",
+        "direction": "out"
+      }
+    }
+  },
+  "Virtual_Cluster": {
+    "display_name": "Virtual Cluster",
+    "properties": [
+      "name",
+      "description"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {
+      "LOCATED_IN": {
+        "target": "Site",
+        "direction": "out"
+      }
+    }
   }
 }

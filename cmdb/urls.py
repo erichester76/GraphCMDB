@@ -5,6 +5,8 @@ from . import views
 app_name = 'cmdb'  
 
 urlpatterns = [
+    path('types/register/', views.type_register, name='type_register'),
+    
     path('', views.dashboard, name='dashboard'),
     
     path('targets/', views.get_target_nodes, name='get_target_nodes'),
@@ -16,7 +18,7 @@ urlpatterns = [
     path('<str:label>/<str:element_id>/delete/', views.node_delete, name='node_delete'),
     path('<str:label>/<str:element_id>/connect/', views.node_connect, name='node_connect'),
     path('<str:label>/<str:element_id>/disconnect/', views.node_disconnect, name='node_disconnect'),
+    path('<str:label>/<str:element_id>/add-relationship-form/', views.node_add_relationship_form, name='node_add_relationship_form'),
     
  
-    path('types/register/', views.type_register, name='type_register'),
 ]

@@ -12,7 +12,6 @@ from neomodel import db, RelationshipTo
 @require_http_methods(["GET", "POST"])
 def type_register(request):
     if request.method == 'GET':
-            # Build list of dicts for template
             types_data = []
             for label in TypeRegistry.known_labels():
                 meta = TypeRegistry.get_metadata(label)
@@ -26,20 +25,19 @@ def type_register(request):
 
             return render(request, 'cmdb/type_register.html', {
                 'types_data': types_data,
-                'existing_labels': TypeRegistry.known_labels(),  # optional fallback
+                'existing_labels': TypeRegistry.known_labels(),
             })
-            
+
     success_message = None
     error_message = None
 
-    # POST handling
     if request.method == 'POST':
         try:
             label = request.POST.get('label', '').strip()
             display_name = request.POST.get('display_name', '').strip()
             description = request.POST.get('description', '').strip()
-            required_str = request.POST.get('required_properties', '')
-            optional_str = request.POST.get('optional_properties', '')
+            required_str = request.POST.get('required', '')
+            properties_str = request.POST.get('properties', '')
 
             if not label or not display_name:
                 error_message = 'Label and display name are required'
@@ -47,9 +45,8 @@ def type_register(request):
                 error_message = f'Type with label "{label}" already exists'
             else:
                 required = [p.strip() for p in required_str.split(',') if p.strip()]
-                optional = [p.strip() for p in optional_str.split(',') if p.strip()]
+                properties = [p.strip() for p in properties_str.split(',') if p.strip()]
 
-                # Process relationships
                 relationships = {}
                 i = 0
                 while True:
@@ -62,31 +59,30 @@ def type_register(request):
                     if rel_type and target_label:
                         relationships[rel_type] = {
                             'target': target_label,
-                            'direction': 'out'  # MVP: only outgoing
+                            'direction': 'out'
                         }
                     i += 1
 
-                TypeRegistry.register(label, {
-                    'display_name': display_name,
-                    'description': description,
-                    'required_properties': required,
-                    'optional_properties': optional,
-                    'relationships': relationships,
-                })
+                    TypeRegistry.register(label, {
+                        'display_name': display_name,
+                        'description': description,
+                        'properties': properties,
+                        'required': required,
+                        'relationships': relationships,
+})
 
                 success_message = f'Type "{label}" registered successfully!'
         except Exception as e:
             error_message = str(e)
 
-    # Always compute fresh data for display (GET or after POST)
     types_data = []
     for label in TypeRegistry.known_labels():
         meta = TypeRegistry.get_metadata(label)
         types_data.append({
             'label': label,
             'display_name': meta.get('display_name', '-'),
-            'required_properties': ', '.join(meta.get('required_properties', [])) or '-',
-            'optional_properties': ', '.join(meta.get('optional_properties', [])) or '-',
+            'required': ', '.join(meta.get('required', [])) or '-',
+            'properties': ', '.join(meta.get('properties', [])) or '-',
             'description': meta.get('description', '-'),
         })
 
@@ -95,7 +91,6 @@ def type_register(request):
         'success': success_message,
         'error': error_message,
     })
-    
     
 def dashboard(request):
     labels = TypeRegistry.known_labels()
@@ -145,6 +140,25 @@ def nodes_list(request, label):
 
     return render(request, 'cmdb/nodes_list.html', context)
 
+@require_http_methods(["GET"])
+def node_add_relationship_form(request, label, element_id):
+    try:
+        # Load node just for context (optional)
+        node_class = DynamicNode.get_or_create_label(label)
+        meta = TypeRegistry.get_metadata(label)
+        allowed_rels = meta.get('relationships', {})
+
+        context = {
+            'label': label,
+            'element_id': element_id,
+            'csrf_token': get_token(request),
+            'allowed_rels': allowed_rels.keys(),  # for dropdown
+            'all_labels': TypeRegistry.known_labels(),
+        }
+        return render(request, 'cmdb/partials/add_relationship_form.html', context)
+    except Exception as e:
+        return HttpResponse(f'<div class="p-4 bg-red-100 text-red-800 rounded">Error loading form: {str(e)}</div>')
+    
 def node_detail(request, label, element_id):
     try:
         node_class = DynamicNode.get_or_create_label(label)
@@ -168,23 +182,43 @@ def node_detail(request, label, element_id):
                 'value_type': type(value).__name__,
             })
 
-        rels_query = f"""
+        out_rels_query = f"""
             MATCH (n:`{label}`) WHERE elementId(n) = $eid
             MATCH (n)-[r]->(m)
             RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
                 apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
         """
-        rels_result, _ = db.cypher_query(rels_query, {'eid': element_id})
+        out_rels_result, _ = db.cypher_query(out_rels_query, {'eid': element_id})
 
-        rels = {}
-        for row in rels_result:
+        out_rels = {}
+        for row in out_rels_result:
             rel_type = row[0]
-            if rel_type not in rels:
-                rels[rel_type] = []
-            rels[rel_type].append({
+            if rel_type not in out_rels:
+                out_rels[rel_type] = []
+            out_rels[rel_type].append({
                 'target_id': row[1],
                 'target_label': row[2],
                 'target_name': row[3] or row[1][:12] + '...',
+            })
+            
+        # Fetch incoming relationships with Cypher
+        in_rels_query = f"""
+            MATCH (n:`{label}`) WHERE elementId(n) = $eid
+            MATCH (m)-[r]->(n)
+            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
+                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
+        """
+        in_rels_result, _ = db.cypher_query(in_rels_query, {'eid': element_id})
+
+        in_rels = {}
+        for row in in_rels_result:
+            rel_type = row[0]
+            if rel_type not in in_rels:
+                in_rels[rel_type] = []
+            in_rels[rel_type].append({
+                'source_id': row[1],
+                'source_label': row[2],
+                'source_name': row[3] or row[1][:12] + '...',
             })
 
         context = {
@@ -192,7 +226,8 @@ def node_detail(request, label, element_id):
             'element_id': element_id,
             'node': node,
             'properties_list': props_list,
-            'relationships': rels,
+            'outbound_relationships': out_rels,
+            'inbound_relationships': in_rels,
             'all_labels': TypeRegistry.known_labels(),
         }
         return render(request, 'cmdb/node_detail.html', context)
@@ -485,30 +520,52 @@ def node_connect(request, label, element_id):
         if not result:
             raise ValueError("Failed to create relationship")
 
-        rels_query = f"""
+        out_rels_query = f"""
             MATCH (n:`{label}`) WHERE elementId(n) = $eid
             MATCH (n)-[r]->(m)
-            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label
+            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
+                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
         """
-        rels_result, _ = db.cypher_query(rels_query, {'eid': element_id})
+        out_rels_result, _ = db.cypher_query(out_rels_query, {'eid': element_id})
 
-        rels = {}
-        for row in rels_result:
+        out_rels = {}
+        for row in out_rels_result:
             rel_type = row[0]
-            if rel_type not in rels:
-                rels[rel_type] = []
-            rels[rel_type].append({
+            if rel_type not in out_rels:
+                out_rels[rel_type] = []
+            out_rels[rel_type].append({
                 'target_id': row[1],
                 'target_label': row[2],
+                'target_name': row[3] or row[1][:12] + '...',
+            })
+            
+        # Fetch incoming relationships with Cypher
+        in_rels_query = f"""
+            MATCH (n:`{label}`) WHERE elementId(n) = $eid
+            MATCH (m)-[r]->(n)
+            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
+                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
+        """
+        in_rels_result, _ = db.cypher_query(in_rels_query, {'eid': element_id})
+
+        in_rels = {}
+        for row in in_rels_result:
+            rel_type = row[0]
+            if rel_type not in in_rels:
+                in_rels[rel_type] = []
+            in_rels[rel_type].append({
+                'source_id': row[1],
+                'source_label': row[2],
+                'source_name': row[3] or row[1][:12] + '...',
             })
 
         return render(request, 'cmdb/partials/node_relationships.html', {
-            'relationships': rels,
+            'inbound_relationships': in_rels,
+            'outbound_relationships': out_rels,
             'element_id': element_id,
             'label': label,
-            'success_message': f"Relationship '{rel_type}' added"
+            'success_message': f"Relationship '{rel_type}' removed"
         })
-
     except Exception as e:
         rels = {}
         return render(request, 'cmdb/partials/node_relationships.html', {
@@ -540,25 +597,48 @@ def node_disconnect(request, label, element_id):
         if deleted == 0:
             raise ValueError("Relationship not found")
 
-        rels_query = f"""
+        out_rels_query = f"""
             MATCH (n:`{label}`) WHERE elementId(n) = $eid
             MATCH (n)-[r]->(m)
-            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label
+            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
+                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
         """
-        rels_result, _ = db.cypher_query(rels_query, {'eid': element_id})
+        out_rels_result, _ = db.cypher_query(out_rels_query, {'eid': element_id})
 
-        rels = {}
-        for row in rels_result:
+        out_rels = {}
+        for row in out_rels_result:
             rel_type = row[0]
-            if rel_type not in rels:
-                rels[rel_type] = []
-            rels[rel_type].append({
+            if rel_type not in out_rels:
+                out_rels[rel_type] = []
+            out_rels[rel_type].append({
                 'target_id': row[1],
                 'target_label': row[2],
+                'target_name': row[3] or row[1][:12] + '...',
+            })
+            
+        # Fetch incoming relationships with Cypher
+        in_rels_query = f"""
+            MATCH (n:`{label}`) WHERE elementId(n) = $eid
+            MATCH (m)-[r]->(n)
+            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
+                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
+        """
+        in_rels_result, _ = db.cypher_query(in_rels_query, {'eid': element_id})
+
+        in_rels = {}
+        for row in in_rels_result:
+            rel_type = row[0]
+            if rel_type not in in_rels:
+                in_rels[rel_type] = []
+            in_rels[rel_type].append({
+                'source_id': row[1],
+                'source_label': row[2],
+                'source_name': row[3] or row[1][:12] + '...',
             })
 
         return render(request, 'cmdb/partials/node_relationships.html', {
-            'relationships': rels,
+            'inbound_relationships': in_rels,
+            'outbound_relationships': out_rels,
             'element_id': element_id,
             'label': label,
             'success_message': f"Relationship '{rel_type}' removed"
@@ -585,15 +665,13 @@ def get_target_nodes(request):
 
         sorted_nodes = sorted(nodes, key=lambda n: n.custom_properties.get('name', n.element_id))
 
-        # Render just the partial as string (no layout)
+        # Render only the fragment (no base.html)
         html = render_to_string('cmdb/partials/target_node_options.html', {
             'nodes': sorted_nodes,
             'target_label': target_label,
         }, request=request)
 
         return HttpResponse(html)
-
+        
     except Exception as e:
-        return HttpResponse(
-            f'<option disabled>Error loading nodes for {target_label}: {str(e)}</option>'
-        )
+        return HttpResponse(f'<option disabled>Error: {str(e)}</option>')

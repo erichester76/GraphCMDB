@@ -20,7 +20,13 @@ class TypeRegistry:
 
     @classmethod
     def get_metadata(cls, label: str) -> Dict[str, Any]:
-        return cls._types.get(label, {})
+        return cls._types.get(label, {
+            'display_name': label,
+            'description': 'No description',
+            'required': [],
+            'properties': [],
+            'relationships': {},
+        })
 
     @classmethod
     def known_labels(cls) -> List[str]:
