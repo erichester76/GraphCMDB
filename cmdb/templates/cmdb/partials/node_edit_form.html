@@ -1,0 +1,76 @@
+<h3 class="text-lg font-medium text-gray-900">Edit {{ label }} ({{ element_id|truncatechars:12 }}...)</h3>
+
+{% if error %}
+    <div class="mt-4 p-3 bg-red-100 text-red-800 rounded">
+        {{ error }}
+    </div>
+{% endif %}
+
+<form 
+    hx-post="{% url 'cmdb:node_edit' label element_id %}"
+    hx-target="#edit-modal-content"
+    hx-swap="innerHTML"
+    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+    hx-on::after-request="if(event.detail.successful) { document.getElementById('edit-modal').close(); htmx.trigger('#nodes-content', 'refresh'); }">
+
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+    <input type="hidden" name="original_json" value="{{ original_json|safe }}">
+    
+    {% if form_fields %}
+        <div class="space-y-4 mb-6">
+            {% for field in form_fields %}
+                <div>
+                    <label for="{{ field.input_name }}" class="block text-sm font-medium text-gray-700">
+                        {{ field.key }}
+                        <span class="text-xs text-gray-500">({{ field.type }})</span>
+                    </label>
+                    {% if field.type == 'checkbox' %}
+                        <input type="checkbox" 
+                               id="{{ field.input_name }}" 
+                               name="{{ field.input_name }}"
+                               {% if field.value %}checked{% endif %}>
+                    {% elif field.type == 'number' %}
+                        <input type="number" 
+                               id="{{ field.input_name }}" 
+                               name="{{ field.input_name }}"
+                               value="{{ field.value }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    {% elif field.type == 'textarea' %}
+                        <textarea 
+                            id="{{ field.input_name }}" 
+                            name="{{ field.input_name }}"
+                            rows="3"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">{{ field.value|join:", " }}</textarea>
+                    {% else %}
+                        <input type="text" 
+                               id="{{ field.input_name }}" 
+                               name="{{ field.input_name }}"
+                               value="{{ field.value }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-gray-500 italic">No properties defined. Use raw JSON below.</p>
+    {% endif %}
+
+    <!-- Raw JSON fallback -->
+    <div class="mt-6">
+        <label for="properties" class="block text-sm font-medium text-gray-700">Raw JSON (overrides fields above)</label>
+        <textarea 
+            id="properties" 
+            name="properties" 
+            rows="4"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm font-mono">{{ current_json }}</textarea>
+    </div>
+
+    <div class="mt-6 flex justify-end gap-3">
+        <button type="button" onclick="document.getElementById('edit-modal').close()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Cancel
+        </button>
+        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+            Save Changes
+        </button>
+    </div>
+</form>

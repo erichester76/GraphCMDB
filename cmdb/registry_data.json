@@ -1,0 +1,55 @@
+{
+  "Site": {
+    "display_name": "Site / Location",
+    "properties": [
+      "name"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {
+      "contains": {
+        "target": "Device",
+        "direction": "out"
+      },
+      "hosts": {
+        "target": "Rack",
+        "direction": "out"
+      }
+    }
+  },
+  "Device": {
+    "display_name": "Device / Server / Network Equipment",
+    "properties": [
+      "name",
+      "ip",
+      "serial",
+      "model"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {
+      "located_in": {
+        "target": "Site",
+        "direction": "out"
+      }
+    }
+  },
+  "Rack": {
+    "display_name": "Rack",
+    "description": "",
+    "required_properties": [
+      "name"
+    ],
+    "optional_properties": []
+  },
+  "Virtual Machine": {
+    "display_name": "Virtual Machine",
+    "description": "",
+    "required_properties": [
+      "name"
+    ],
+    "optional_properties": []
+  }
+}

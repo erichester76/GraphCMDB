@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Register New Type{% endblock %}
+
+{% block page_title %}Register New Object Type{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    {% if success %}
+        <div class="mb-6 p-4 bg-green-100 text-green-800 rounded-lg">
+            {{ success }}
+        </div>
+    {% endif %}
+
+    {% if error %}
+        <div class="mb-6 p-4 bg-red-100 text-red-800 rounded-lg">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <form method="post" class="space-y-6 bg-white p-6 rounded-lg shadow">
+        {% csrf_token %}
+
+        <div>
+            <label for="label" class="block text-sm font-medium text-gray-700">Label (internal name)</label>
+            <input type="text" name="label" id="label" required
+                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                   placeholder="e.g. Rack, VLAN, VM">
+        </div>
+
+        <div>
+            <label for="display_name" class="block text-sm font-medium text-gray-700">Display Name</label>
+            <input type="text" name="display_name" id="display_name" required
+                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                   placeholder="e.g. Rack, VLAN Network, Virtual Machine">
+        </div>
+
+        <div>
+            <label for="description" class="block text-sm font-medium text-gray-700">Description (optional)</label>
+            <textarea name="description" id="description" rows="3"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="required_properties" class="block text-sm font-medium text-gray-700">Required Properties (comma separated)</label>
+                <input type="text" name="required_properties" id="required_properties"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                       placeholder="name, serial">
+            </div>
+
+            <div>
+                <label for="optional_properties" class="block text-sm font-medium text-gray-700">Optional Properties (comma separated)</label>
+                <input type="text" name="optional_properties" id="optional_properties"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                       placeholder="ip, model, vendor">
+            </div>
+        </div>
+
+        <div class="mt-8">
+            <h3 class="text-lg font-medium text-gray-900">Allowed Relationships (outgoing)</h3>
+            <p class="text-sm text-gray-500 mb-4">Define which relationship types this type can have to other types.</p>
+
+            <div id="relationships-container" class="space-y-4">
+                <!-- Existing relationships (if editing later) -->
+                <!-- For MVP, we start empty -->
+
+                <!-- JS to add more -->
+                <button type="button" onclick="addRelationshipField()"
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
+                    + Add Relationship Type
+                </button>
+            </div>
+        </div>
+
+        <script>
+        function addRelationshipField() {
+            const container = document.getElementById('relationships-container');
+            const index = container.querySelectorAll('.relationship-group').length;
+
+            const group = document.createElement('div');
+            group.className = 'relationship-group grid grid-cols-1 md:grid-cols-3 gap-4 border p-4 rounded bg-gray-50';
+
+            group.innerHTML = `
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Relationship Type</label>
+                    <input type="text" name="rel_type_${index}" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                        placeholder="e.g. LOCATED_IN">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Target Label</label>
+                    <select name="rel_target_${index}" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm">
+                        <option value="">Select target</option>
+                        {% for lbl in existing_labels %}
+                            <option value="{{ lbl }}">{{ lbl }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="button" onclick="this.parentElement.parentElement.remove()"
+                            class="px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm">
+                        Remove
+                    </button>
+                </div>
+            `;
+
+            container.insertBefore(group, container.lastElementChild);
+        }
+        </script>
+        <div class="flex justify-end">
+            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                Register Type
+            </button>
+        </div>
+    </form>
+
+    <div class="mt-10">
+        <h3 class="text-lg font-medium text-gray-900">Existing Types</h3>
+        <div class="mt-4 bg-white shadow rounded-lg overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Label</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Display Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Required</th>
+                    </tr>
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Label</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Display Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Required</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Relationships (out)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for type_item in types_data %}
+                    <tr>
+                        <td>{{ type_item.label }}</td>
+                        <td>{{ type_item.display_name }}</td>
+                        <td>{{ type_item.required_properties }}</td>
+                        <td>
+                            {% for rel_type, rel in type_item.metadata.relationships.items %}
+                                {{ rel_type }} → {{ rel.target }}<br>
+                            {% empty %}
+                                None
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

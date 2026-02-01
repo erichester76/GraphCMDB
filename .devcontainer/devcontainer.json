@@ -1,0 +1,36 @@
+{
+  "name": "Django + Neo4j Graph CMDB",
+
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+
+  // Features (optional VS Code extensions & tools auto-installed)
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+  },
+
+  // Forward Neo4j browser and Django server
+  "forwardPorts": [8000, 7474, 7687],
+
+  // Install VS Code extensions automatically
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "graphql.vscode-graphql",
+        "graphql.vscode-graphql-execution",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml"
+      ]
+    }
+  },
+
+  // Run after container creation (install labels, etc.)
+  "postCreateCommand": "pip install --user -r requirements.txt || true && echo 'Container ready'",
+
+  // Optional: run migrations or label install on start
+  "postAttachCommand": "python manage.py install_labels || true"
+}

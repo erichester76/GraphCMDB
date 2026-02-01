@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity   # Keeps container alive for VS Code to attach
+    ports:
+      - "8000:8000"
+    depends_on:
+      - neo4j  
+
+  neo4j:
+    image: neo4j:5.26   # or latest, or 2025.x version you prefer
+    ports:
+      - "7474:7474"     # Browser
+      - "7687:7687"     # Bolt
+    environment:
+      - NEO4J_AUTH=neo4j/23r9u4230rusfd
+      # Explicitly bind Bolt and HTTP to all interfaces (0.0.0.0)
+      - NEO4J_server_bolt_listen__address=0.0.0.0:7687
+      - NEO4J_server_bolt_advertised__address=neo4j:7687   # or your external host:port if needed
+      - NEO4J_server_http_listen__address=0.0.0.0:7474     # (you already have HTTP working, but good to match)
+      - NEO4J_server_http_advertised__address=neo4j:7474
+      - NEO4J_server_bolt_tls__level=DISABLED  # Disable TLS for simplicity in dev
+      
+      # Memory (keep if you have it)`
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=512m
+      - NEO4J_server_memory_pagecache_size=512m
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:  # Ensure Neo4j is ready before app starts
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "23r9u4230rusfd", "-a", "bolt://neo4j:7687", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  neo4j_data:
+  neo4j_logs:

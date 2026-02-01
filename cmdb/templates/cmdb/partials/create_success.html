@@ -1,0 +1,10 @@
+<div class="mt-4 p-3 bg-green-100 text-green-800 rounded">
+    {{ message }}
+</div>
+
+<script>
+    setTimeout(() => {
+        document.getElementById('create-modal').close();
+        htmx.trigger('#nodes-content', 'refresh');
+    }, 1500);  // 1.5s delay - adjust as needed
+</script>

@@ -1,0 +1,4 @@
+django>=5.0
+graphene-django>=3.0
+neomodel>=5.0
+django-neomodel

@@ -1,0 +1,79 @@
+{% if success_message %}
+    <div class="mb-4 p-3 bg-green-100 text-green-800 rounded">
+        {{ success_message }}
+    </div>
+{% endif %}
+
+{% if error_message %}
+    <div class="mb-4 p-3 bg-red-100 text-red-800 rounded">
+        Error: {{ error_message }}
+    </div>
+{% endif %}
+<h3 class="text-lg font-medium text-gray-900 mb-4">Relationships</h3>
+{% if relationships %}
+    <ul class="space-y-2 mb-6">
+        {% for rel_type, targets in relationships.items %}
+            <li class="text-sm">
+                <strong>{{ rel_type }}</strong> → 
+                {% for t in targets %}
+                    <span class="text-indigo-600">
+                        {{ t.target_label }} ({{ t.target_id|truncatechars:8 }}...)
+                    </span>
+                    <button hx-post="{% url 'cmdb:node_disconnect' label element_id %}"
+                            hx-vars='{ "rel_type": "{{ rel_type }}", "target_id": "{{ t.target_id }}", "target_label": "{{ t.target_label }}" }'
+                            hx-target="#relationships-section"
+                            hx-swap="innerHTML"
+                            hx-confirm="Disconnect this relationship?"
+                            class="ml-2 text-red-600 text-xs hover:underline">
+                        Disconnect
+                    </button>
+                    {% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="text-gray-500 mb-6">No outgoing relationships</p>
+{% endif %}
+
+<!-- Add Relationship Form (re-included for refresh) -->
+<h4 class="text-md font-medium text-gray-800 mb-3">Add Relationship</h4>
+<form hx-post="{% url 'cmdb:node_connect' label element_id %}"
+      hx-target="#relationships-section"
+      hx-swap="innerHTML"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      class="space-y-4">
+
+    {% csrf_token %}
+
+    <div>
+        <label for="rel_type" class="block text-sm font-medium text-gray-700">Relationship Type</label>
+        <input type="text" name="rel_type" id="rel_type" required
+               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+               placeholder="e.g. LOCATED_IN">
+    </div>
+
+    <div>
+        <label for="target_label" class="block text-sm font-medium text-gray-700">Target Label</label>
+        <select name="target_label" id="target_label" required
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            <option value="">Select label</option>
+            {% for lbl in all_labels %}
+                <option value="{{ lbl }}">{{ lbl }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label for="target_id" class="block text-sm font-medium text-gray-700">Target Element ID</label>
+        <input type="text" name="target_id" id="target_id" required
+               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+               placeholder="e.g. 4:17ba6a45-...">
+    </div>
+
+    <div class="flex justify-end">
+        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+            Add Relationship
+        </button>
+    </div>
+</form>
