@@ -30,26 +30,42 @@
 
             <nav class="mt-6 px-3 space-y-1">
                 <a href="{% url 'cmdb:dashboard' %}"
-                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'dashboard' %}bg-indigo-50 text-indigo-700{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
-                    <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
+                class="flex items-center px-3 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'dashboard' %}bg-indigo-50 text-indigo-700{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
                     Dashboard
                 </a>
 
-                <!-- Label links – we'll populate dynamically later -->
-                {% for label in all_labels %}
-                <a href="{% url 'cmdb:nodes_list' label %}"
-                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md {% if request.resolver_match.kwargs.label == label %}bg-indigo-50 text-indigo-700{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
-                    {{ label }}
-                </a>
-                {% endfor %}
+                <!-- Grouped Labels by Category -->
+                <div x-data="{ openCategories: {} }">
+                    {% for category, labels in categories.items %}
+                        <div class="space-y-1">
+                            <button @click="openCategories['{{ category }}'] = !openCategories['{{ category }}']"
+                                    class="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md">
+                                {{ category }}
+                                <svg x-show="openCategories['{{ category }}']" class="ml-auto h-5 w-5 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                                <svg x-show="!openCategories['{{ category }}']" class="ml-auto h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
 
+                            <div x-show="openCategories['{{ category }}']" x-transition class="space-y-1 pl-4">
+                                {% for label in labels %}
+                                    <a href="{% url 'cmdb:nodes_list' label %}"
+                                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md {% if request.resolver_match.kwargs.label == label %}bg-indigo-50 text-indigo-700{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                                        {{ label }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Register New Type -->
                 <a href="{% url 'cmdb:type_register' %}"
-                class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50">
+                class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 mt-4">
                     + Register New Type
                 </a>
-                
             </nav>
         </aside>
 

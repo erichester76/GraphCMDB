@@ -106,7 +106,7 @@
                         <strong>{{ rel_type }}</strong> →
                         {% for t in targets %}
                             <a href="{% url 'cmdb:node_detail' t.target_label t.target_id %}" class="text-indigo-600 hover:text-indigo-800">
-                                {{ t.target_label }}:{{ t.target_name|default:t.target_id|truncatechars:12 }}
+                                {{ t.target_label }}:{{ t.target_name|default:t.target_id }}
                             </a>
                             <button hx-post="{% url 'cmdb:node_disconnect' label element_id %}"
                                     hx-vars='{ "rel_type": "{{ rel_type }}", "target_id": "{{ t.target_id }}", "target_label": "{{ t.target_label }}" }'
@@ -130,9 +130,9 @@
                 {% for rel_type, sources in inbound_relationships.items %}
                     <li class="text-sm">
                         <strong>{{ rel_type }}</strong> ←
-                        {% for s in sources %}
-                            <a href="{% url 'cmdb:node_detail' s.source_label s.source_id %}" class="text-purple-600 hover:text-purple-800">
-                                {{ s.source_label }}:{{ s.source_name|default:s.source_id|truncatechars:12 }}
+                            {% for s in sources %}
+                            <a href="{% url 'cmdb:node_detail' s.source_label s.source_id %}" class="text-indigo-600 hover:text-indigo-800">
+                                {{ s.source_label }}:{{ s.source_name|default:s.source_id }}
                             </a>
                             {% if not forloop.last %}, {% endif %}
                         {% endfor %}

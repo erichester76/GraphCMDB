@@ -29,6 +29,17 @@ class TypeRegistry:
         })
 
     @classmethod
+    def get_categories(cls):
+        categories = {}
+        for label in cls.known_labels():
+            meta = cls.get_metadata(label)
+            cat = meta.get('category', 'Uncategorized')
+            if cat not in categories:
+                categories[cat] = []
+            categories[cat].append(label)
+        return categories  # dict: category → list of labels
+
+    @classmethod
     def known_labels(cls) -> List[str]:
         return sorted(cls._types.keys())  # sort for consistent UI
 

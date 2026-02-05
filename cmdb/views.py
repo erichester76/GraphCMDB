@@ -8,6 +8,7 @@ from django.middleware.csrf import get_token
 import json
 from django.views.decorators.http import require_http_methods
 from neomodel import db, RelationshipTo
+from django.template import Context, Template
 
 @require_http_methods(["GET", "POST"])
 def type_register(request):
@@ -38,11 +39,14 @@ def type_register(request):
             description = request.POST.get('description', '').strip()
             required_str = request.POST.get('required', '')
             properties_str = request.POST.get('properties', '')
-
+            category = request.POST.get('category', '').strip()
+            
             if not label or not display_name:
                 error_message = 'Label and display name are required'
             elif label in TypeRegistry.known_labels():
                 error_message = f'Type with label "{label}" already exists'
+            elif not category:
+                error_message = 'Category is required'
             else:
                 required = [p.strip() for p in required_str.split(',') if p.strip()]
                 properties = [p.strip() for p in properties_str.split(',') if p.strip()]
@@ -69,6 +73,7 @@ def type_register(request):
                         'properties': properties,
                         'required': required,
                         'relationships': relationships,
+                        'category': category,
 })
 
                 success_message = f'Type "{label}" registered successfully!'
@@ -127,7 +132,19 @@ def nodes_list(request, label):
     except Exception as e:
         print(f"Error fetching {label}: {e}")
         nodes = []
-
+    
+    # Add a computed .name attribute to each node for template use
+    for node in nodes:
+        props = node.custom_properties or {}
+        if 'name' in props:
+            node.display_name = props['name']
+        elif props:
+            # Get first property value (sorted by key)
+            first_key = sorted(props.keys())[0]
+            node.display_name = str(props[first_key])
+        else:
+            node.display_name = f"Unnamed {label}"
+            
     context = {
         'label': label,
         'nodes': nodes,
@@ -185,9 +202,21 @@ def node_detail(request, label, element_id):
         out_rels_query = f"""
             MATCH (n:`{label}`) WHERE elementId(n) = $eid
             MATCH (n)-[r]->(m)
-            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
-                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
+            WITH 
+                type(r) AS rel_type,
+                elementId(m) AS target_id,
+                labels(m)[0] AS target_label,
+                apoc.convert.fromJsonMap(m.custom_properties) AS props_map
+            RETURN 
+                rel_type,
+                target_id,
+                target_label,
+                COALESCE(
+                    props_map.name,
+                    props_map[head(keys(props_map))]
+                ) AS target_name
         """
+
         out_rels_result, _ = db.cypher_query(out_rels_query, {'eid': element_id})
 
         out_rels = {}
@@ -198,15 +227,26 @@ def node_detail(request, label, element_id):
             out_rels[rel_type].append({
                 'target_id': row[1],
                 'target_label': row[2],
-                'target_name': row[3] or row[1][:12] + '...',
+                'target_name': row[3] or row[1][:50] + '...',
             })
             
         # Fetch incoming relationships with Cypher
         in_rels_query = f"""
             MATCH (n:`{label}`) WHERE elementId(n) = $eid
             MATCH (m)-[r]->(n)
-            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
-                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
+            WITH 
+                type(r) AS rel_type,
+                elementId(m) AS source_id,
+                labels(m)[0] AS source_label,
+                apoc.convert.fromJsonMap(m.custom_properties) AS props_map
+            RETURN 
+                rel_type,
+                source_id,
+                source_label,
+                COALESCE(
+                    props_map.name,
+                    props_map[head(keys(props_map))]
+                ) AS source_name
         """
         in_rels_result, _ = db.cypher_query(in_rels_query, {'eid': element_id})
 
@@ -218,7 +258,7 @@ def node_detail(request, label, element_id):
             in_rels[rel_type].append({
                 'source_id': row[1],
                 'source_label': row[2],
-                'source_name': row[3] or row[1][:12] + '...',
+                'source_name': row[3] or row[1][:50] + '...',
             })
 
         context = {
@@ -412,12 +452,6 @@ def node_create(request, label):
                     'input_name': f'prop_{key}',
                     'required': key in required_props,
                 })
-                
-            print("Creating form for label:", label)
-            print("Meta from registry:", meta)
-            print("Props:", props)
-            print("Required props:", required_props)
-            print("Form fields built:", form_fields)
             
             context = {
                 'label': label,
@@ -474,10 +508,6 @@ def node_create(request, label):
                     'error': f"Missing required properties: {', '.join(missing)}",
                     'form_fields': form_fields,
                 })
-
-
-            print("Type of custom_properties before save:", type(new_props))
-            print("new_props before save:", new_props)
             
             # Save as dict (not string)
             node_class = DynamicNode.get_or_create_label(label)
@@ -665,13 +695,14 @@ def get_target_nodes(request):
 
         sorted_nodes = sorted(nodes, key=lambda n: n.custom_properties.get('name', n.element_id))
 
-        # Render only the fragment (no base.html)
-        html = render_to_string('cmdb/partials/target_node_options.html', {
+        # Load the partial template manually as string
+        template = Template(open('cmdb/templates/cmdb/partials/target_node_options.html').read())
+        html = template.render(Context({
             'nodes': sorted_nodes,
             'target_label': target_label,
-        }, request=request)
+        }))
 
         return HttpResponse(html)
-        
+
     except Exception as e:
-        return HttpResponse(f'<option disabled>Error: {str(e)}</option>')
+        return HttpResponse(f'<option disabled>Error loading nodes for {target_label}: {str(e)}</option>')
