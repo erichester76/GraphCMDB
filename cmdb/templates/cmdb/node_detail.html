@@ -8,7 +8,13 @@
 <div class="bg-white shadow rounded-lg p-6" id="main-content">
     <!-- Node Header with Actions -->
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">{{ label }} Detail</h1>
+        <h1 class="text-2xl font-bold text-gray-900">{{ label }} :: 
+        {% for prop in properties_list %}
+        {% if prop.key == 'name' %}
+            {{ prop.value }}
+        {% endif %}
+        {% endfor %}
+        </h1>
         <div class="flex gap-4">
                 <button 
                     hx-get="{% url 'cmdb:node_edit' label node.element_id %}" 
