@@ -9,7 +9,7 @@ def rack_elevation_tab(request, label, element_id):
         'label': label,
         'element_id': element_id,
         'node': None,
-        'rack_units': [],
+        'custom_data': [],
         'error': None,
     }
 
@@ -82,7 +82,7 @@ def rack_elevation_tab(request, label, element_id):
             })
             rack_units.append(unit)
             
-        context['rack_units'] = rack_units
+        context['custom_data'] = rack_units
 
     except Exception as e:
         context['error'] = str(e)
@@ -92,13 +92,13 @@ def rack_elevation_tab(request, label, element_id):
 def row_racks_tab(request, label, element_id):
     """
     Custom view for Row Racks tab.
-    Fetches all racks in the row.
+    Fetches all racks located in this row (incoming LOCATED_IN rels).
     """
     context = {
         'label': label,
         'element_id': element_id,
         'node': None,
-        'row_racks': [],
+        'custom_data': [],
         'error': None,
     }
 
@@ -112,21 +112,33 @@ def row_racks_tab(request, label, element_id):
         result, _ = db.cypher_query(query, {'eid': element_id})
         if not result:
             context['error'] = f"Row node not found: {element_id}"
-            return render(request, 'drow_racks_tab.html', context)
+            return context
 
         raw_node = result[0][0]
         node = node_class.inflate(raw_node)
         context['node'] = node
 
-        # Fetch all racks in this row (HAS_RACK rels)
+        # Fetch all racks located in this row (incoming LOCATED_IN rels)
         racks_query = f"""
             MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (n)-[:HAS_RACK]->(rack:Rack)
-            RETURN 
-                elementId(rack) AS rack_id,
-                labels(rack)[0] AS rack_label,
-                rack.custom_properties.name AS rack_name,
-                rack.custom_properties.height_units AS height_units
+                MATCH (rack:Rack)-[:LOCATED_IN]->(n)
+
+                WITH 
+                    rack,
+                    apoc.convert.fromJsonMap(rack.custom_properties) AS rack_props
+
+                RETURN 
+                    elementId(rack) AS rack_id,
+                    labels(rack)[0] AS rack_label,
+                    COALESCE(
+                        rack_props.name,
+                        rack_props.Name,                // case-insensitive fallback
+                        rack_props.NAME,
+                        rack_props[head(keys(rack_props))],
+                        'Unnamed'
+                    ) AS rack_name,
+                    COALESCE(toInteger(rack_props.height), 0) AS height
+                ORDER BY COALESCE(rack_props.name, 'Unnamed')
         """
         racks_result, _ = db.cypher_query(racks_query, {'eid': element_id})
 
@@ -136,16 +148,15 @@ def row_racks_tab(request, label, element_id):
                 'id': row[0],
                 'label': row[1],
                 'name': row[2] or row[0][:12] + '...',
-                'height_units': row[3] or 0,
+                'height': row[3] or 0,
             })
 
-        context['row_racks'] = row_racks
+        context['custom_data'] = row_racks
 
     except Exception as e:
         context['error'] = str(e)
 
-    return render(request, 'row_racks_tab.html', context)
-
+    return context
 
 def room_racks_tab(request, label, element_id):
     """
