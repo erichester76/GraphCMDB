@@ -1,0 +1,54 @@
+{
+  "DHCP_Scope": {
+    "display_name": "DHCP Scope / Pool",
+    "category": "DHCP",
+    "properties": [
+      "name",
+      "range_start",
+      "range_end",
+      "subnet_mask",
+      "gateway",
+      "dns_server",
+      "lease_time_days"
+    ],
+    "required": [
+      "name",
+      "range_start",
+      "range_end"
+    ],
+    "relationships": {
+      "PART_OF": {
+        "target": "Network",
+        "direction": "out"
+      }
+    }
+  },
+  "DHCP_Lease": {
+    "display_name": "DHCP Lease",
+    "category": "DHCP",
+    "properties": [
+      "client-id",
+      "lease_start",
+      "lease_end",
+      "status"
+    ],
+    "required": [
+      "client-id",
+      "status"
+    ],
+    "relationships": {
+      "ASSIGNED_FROM": {
+        "target": "DHCP_Scope",
+        "direction": "out"
+      },
+      "ASSIGNED_TO": {
+        "target": "IP_Address",
+        "direction": "out"
+      },
+      "ASSIGNED_FOR": {
+        "target": "Mac_Address",
+        "direction": "out"
+      }
+    }
+  }
+}

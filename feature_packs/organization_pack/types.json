@@ -1,0 +1,193 @@
+{
+  "Organization": {
+    "display_name": "Organization / Company",
+    "category": "Organization",
+    "properties": [
+      "name",
+      "legal_name",
+      "tax_id",
+      "website",
+      "industry",
+      "headquarters_address",
+      "founded_year"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {
+      "LOCATED_AT": {
+        "target": "Site",
+        "direction": "out"
+      },
+      "OWNED_BY": {
+        "target": "Person",
+        "direction": "out"
+      }
+    }
+  },
+  "Department": {
+    "display_name": "Department / Team",
+    "category": "Organization",
+    "properties": [
+      "name",
+      "code",
+      "description",
+      "budget",
+      "headcount"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {
+      "PART_OF": {
+        "target": "Organization",
+        "direction": "out"
+      },
+      "MANAGED_BY": {
+        "target": "Person",
+        "direction": "out"
+      },
+      "LOCATED_AT": {
+        "target": "Building",
+        "direction": "out"
+      }
+    }
+  },
+  "Person": {
+    "display_name": "Person / Employee",
+    "category": "Organization",
+    "properties": [
+      "name",
+      "email",
+      "employee_id",
+      "title",
+      "phone",
+      "hire_date",
+      "status"
+    ],
+    "required": [
+      "name",
+      "email"
+    ],
+    "relationships": {
+      "WORKS_IN": {
+        "target": "Department",
+        "direction": "out"
+      },
+      "MANAGES": {
+        "target": "Department",
+        "direction": "out"
+      },
+      "LOCATED_IN": {
+        "target": "Room",
+        "direction": "out"
+      },
+      "REPORTS_TO": {
+        "target": "Person",
+        "direction": "out"
+      }
+    }
+  },
+  "Site": {
+    "display_name": "Site / Location",
+    "category": "Facilities",
+    "properties": [
+      "name",
+      "address",
+      "city",
+      "state",
+      "postal_code",
+      "country",
+      "site_code",
+      "latitude",
+      "longitude"
+    ],
+    "required": [
+      "name",
+      "address",
+      "city",
+      "country"
+    ],
+    "relationships": {
+      "MANAGED_BY": {
+        "target": "Person",
+        "direction": "out"
+      }
+    }
+  },
+  "Building": {
+    "display_name": "Building",
+    "category": "Facilities",
+    "properties": [
+      "name",
+      "building_number",
+      "floors",
+      "square_footage",
+      "address",
+      "type",
+      "status"
+    ],
+    "required": [
+      "name",
+      "address"
+    ],
+    "relationships": {
+      "LOCATED_IN": {
+        "target": "Site",
+        "direction": "out"
+      },
+      "MANAGED_BY": {
+        "target": "Person",
+        "direction": "out"
+      }
+    }
+  },
+  "Floor": {
+    "display_name": "Floor / Level",
+    "category": "Facilities",
+    "properties": [
+      "floor_number",
+      "description",
+      "square_footage"
+    ],
+    "required": [
+      "floor_number"
+    ],
+    "relationships": {
+      "LOCATED_IN": {
+        "target": "Building",
+        "direction": "out"
+      }
+    }
+  },
+  "Room": {
+    "display_name": "Room / Office",
+    "category": "Facilities",
+    "properties": [
+      "name",
+      "room_number",
+      "floor",
+      "square_footage",
+      "purpose",
+      "capacity"
+    ],
+    "required": [
+      "name",
+      "room_number"
+    ],
+    "relationships": {
+      "LOCATED_IN": {
+        "target": "Floor",
+        "direction": "out"
+      },
+      "ASSIGNED_TO": {
+        "target": "Department",
+        "direction": "out"
+      },
+      "OCCUPIED_BY": {
+        "target": "Person",
+        "direction": "out"
+      }
+    }
+  }
+}

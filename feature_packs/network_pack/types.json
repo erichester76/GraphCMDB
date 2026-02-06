@@ -1,0 +1,84 @@
+{
+  "Interface": {
+    "display_name": "Network Interface",
+    "category": "Networking",
+    "properties": [
+      "name",
+      "speed_mbps",
+      "duplex",
+      "status",
+      "description"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {
+      "LOCATED_ON": {
+        "target": "Device",
+        "direction": "out"
+      }
+    }
+  },
+  "Cable": {
+    "display_name": "Network Cable",
+    "category": "Networking",
+    "properties": [
+      "type",
+      "length_meters",
+      "color",
+      "status"
+    ],
+    "required": [
+      "type"
+    ],
+    "relationships": {
+      "CONNECTS": {
+        "target": "Interface",
+        "direction": "out"
+      }
+    }
+  },
+  "Circuit": {
+    "display_name": "WAN Circuit",
+    "category": "Networking",
+    "properties": [
+      "name",
+      "circuit_id",
+      "bandwidth_mbps",
+      "type",
+      "status"
+    ],
+    "required": [
+      "name",
+      "circuit_id",
+      "bandwidth_mbps"
+    ],
+    "relationships": {
+      "TERMINATES_AT": {
+        "target": "Interface",
+        "direction": "out"
+      },
+      "PROVIDED_BY": {
+        "target": "Vendor",
+        "direction": "out"
+      }
+    }
+  },
+  "VLAN": {
+    "display_name": "VLAN",
+    "category": "Networking",
+    "properties": [
+      "vlan_id",
+      "name",
+      "description",
+      "status"
+    ],
+    "required": [
+      "vlan_id",
+      "name"
+    ],
+    "relationships": {
+
+    }
+  }
+}

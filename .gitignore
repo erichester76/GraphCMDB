@@ -1,0 +1,10 @@
+*.pyc
+package-lock.json
+package.json
+node_modules/
+.vscode/
+.DS_Store
+.env
+__pycache__/
+.env.local
+registry_data.json

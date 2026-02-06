@@ -1,0 +1,40 @@
+{
+  "Vendor": {
+    "display_name": "Vendor",
+    "category": "Vendor Management",
+    "properties": [
+      "name",
+      "website",
+      "contact_email"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {}
+  },
+    "Contract": {
+        "display_name": "Contract",
+        "category": "Vendor Management",
+        "properties": [
+        "contract_id",
+        "name",
+        "start_date",
+        "end_date",
+        "value"
+        ],
+        "required": [
+        "contract_id",
+        "name"
+        ],
+        "relationships": {
+        "PROVIDED_BY": {
+            "target": "Vendor",
+            "direction": "out"
+        },
+        "MANAGED_BY": {
+            "target": "Person", 
+            "direction": "out"
+        }
+    }
+}
+}

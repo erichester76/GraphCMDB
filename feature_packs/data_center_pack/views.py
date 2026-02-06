@@ -41,7 +41,7 @@ def rack_elevation_tab(request, label, element_id):
         units_query = f"""
             MATCH (n:`{label}`) WHERE elementId(n) = $eid
             MATCH (n)<-[:LOCATED_IN]-(u:Rack_Unit)
-            OPTIONAL MATCH (u)<-[:OCCUPIES]-(d:Device)
+            OPTIONAL MATCH (u)<-[:LOCATED_IN]-(d:Device)
 
             WITH 
                 u,
@@ -57,10 +57,7 @@ def rack_elevation_tab(request, label, element_id):
                 COALESCE(labels(d)[0], 'Unknown')           AS device_label
             ORDER BY COALESCE(toInteger(u_props.unit_number), 0) DESC
         """
-        units_result, _ = db.cypher_query(units_query, {'eid': element_id})
-
-        print(f"{units_result}")  # Debugging line
-
+        units_result, _ = db.cypher_query(units_query, {'eid': element_id})  
 
         unit_map = {}
         for row in units_result:
@@ -85,8 +82,6 @@ def rack_elevation_tab(request, label, element_id):
             })
             rack_units.append(unit)
             
-        print(f"{rack_units}")  # Debugging line
-
         context['rack_units'] = rack_units
 
     except Exception as e:

@@ -51,10 +51,6 @@
       "row_number"
     ],
     "relationships": {
-      "HAS_RACK": {
-        "target": "Rack",
-        "direction": "out"
-      },
       "LOCATED_IN": {
         "target": "Room",
         "direction": "out"
@@ -79,10 +75,6 @@
       "LOCATED_IN": {
         "target": "Site",
         "direction": "out"
-      },
-      "CONTAINS": {
-        "target": "Row",
-        "direction": "out"
       }
     }
   },
@@ -91,18 +83,39 @@
     "category": "Data Center",
     "properties": [
       "name",
-      "model",
-      "manufacturer",
       "serial_number"
     ],
     "required": [
       "name"
     ],
     "relationships": {  
-      "OCCUPIES": {
+      "LOCATED_IN": {
         "target": "Rack_Unit",
         "direction": "out"
+      },
+      "INSTANCE_OF": {
+        "target": "Device_Type",
+        "direction": "out"
       }
+   }
+  },
+  "Device_Type": {
+    "display_name": "Device Type",
+    "category": "Data Center",
+    "properties": [
+      "name",
+      "description",
+      "rack_units",
+      "depth"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {
+      "MANUFACTURED_BY": {
+        "target": "Vendor",
+        "direction": "out"
+      }
+    }
   }
-}
 }

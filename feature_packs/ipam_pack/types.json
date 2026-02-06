@@ -1,0 +1,64 @@
+{
+  "Network": {
+    "display_name": "Network / Subnet",
+    "category": "IPAM",
+    "properties": [
+      "name",
+      "cidr",
+      "description"
+    ],
+    "required": [
+      "name",
+      "cidr"
+    ],
+    "relationships": {
+      "CHILD_OF": {
+        "target": "Network",
+        "direction": "out"
+      },
+      "ASSIGNED_TO": {
+        "target": "VLAN",
+        "direction": "out"
+      }
+    }
+  },
+  "IP_Address": {
+    "display_name": "IP Address",
+    "category": "IPAM",
+    "properties": [
+      "address",
+      "type",
+      "status"
+    ],
+    "required": [
+      "address"
+    ],
+    "relationships": {
+      "PART_OF": {
+        "target": "Network",
+        "direction": "out"
+      },
+      "ASSIGNED_TO": {
+        "target": "Mac_Address",
+        "direction": "out"
+      }
+    }
+  },
+  "Mac_Address": {
+    "display_name": "MAC Address",
+    "category": "IPAM",
+    "properties": [
+      "address",
+      "status"
+    ],
+    "required": [
+      "address"
+    ],
+    "relationships": {
+      "ASSIGNED_TO": {
+        "target": "Interface",
+        "direction": "out"
+      }
+    }
+  }
+}

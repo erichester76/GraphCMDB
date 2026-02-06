@@ -1,0 +1,64 @@
+{
+  "Virtual_Machine": {
+    "display_name": "Virtual Machine",
+    "category": "Virtualization",
+    "properties": [
+      "name",
+      "vcpus",
+      "memory_mb",
+      "disk_gb",
+      "os",
+      "status",
+      "uuid"
+    ],
+    "required": [
+      "name",
+      "uuid"
+    ],
+    "relationships": {
+      "HOSTED_ON": {
+        "target": "Virtual_Cluster",
+        "direction": "out"
+      }
+    }
+  },
+  "Virtual_Host": {
+    "display_name": "Virtualization Host / Hypervisor",
+    "category": "Virtualization",
+    "properties": [
+      "name",
+      "hypervisor_type",
+      "cpu_cores",
+      "memory_gb",
+      "status"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {
+      "HOSTED_ON": {
+        "target": "Device",
+        "direction": "out"
+      }
+    }
+  },
+  "Virtual_Cluster": {
+    "display_name": "Virtual Cluster",
+    "category": "Virtualization",
+    "properties": [
+      "name",
+      "description",
+      "type",
+      "status"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {
+        "MANAGED_BY": {
+          "target": "Person",
+          "direction": "out" 
+        }
+    }
+  }
+}
