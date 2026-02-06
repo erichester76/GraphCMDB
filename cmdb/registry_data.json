@@ -64,20 +64,27 @@
     }
   },
   "Rack": {
-    "display_name": "Rack ID",
+    "display_name": "Rack / Cabinet",
     "category": "Data Center",
     "properties": [
       "name",
-      "height",
+      "height_units",
       "width",
-      "model"
+      "depth_mm",
+      "model",
+      "serial_number"
     ],
     "required": [
-      "name"
+      "name",
+      "height_units"
     ],
     "relationships": {
       "LOCATED_IN": {
         "target": "Row",
+        "direction": "out"
+      },
+      "HAS_UNIT": {
+        "target": "Rack_Unit",
         "direction": "out"
       }
     }
@@ -103,12 +110,19 @@
     "category": "Data Center",
     "properties": [
       "name",
+      "row_number",
+      "aisle",
       "description"
     ],
     "required": [
-      "name"
+      "name",
+      "row_number"
     ],
     "relationships": {
+      "HAS_RACK": {
+        "target": "Rack",
+        "direction": "out"
+      },
       "LOCATED_IN": {
         "target": "Room",
         "direction": "out"
@@ -120,14 +134,22 @@
     "category": "Data Center",
     "properties": [
       "name",
-      "description"
+      "room_number",
+      "floor",
+      "square_footage",
+      "cooling_capacity_kw"
     ],
     "required": [
-      "name"
+      "name",
+      "room_number"
     ],
     "relationships": {
       "LOCATED_IN": {
         "target": "Site",
+        "direction": "out"
+      },
+      "CONTAINS": {
+        "target": "Row",
         "direction": "out"
       }
     }
@@ -563,6 +585,23 @@
       },
       "FEED_BY": {
         "target": "Power_Source",
+        "direction": "out"
+      }
+    }
+  },
+  "Rack_Unit": {
+    "display_name": "Rack Unit",
+    "category": "Data Center",
+    "properties": [
+      "unit_number",
+      "status"
+    ],
+    "required": [
+      "unit_number"
+    ],
+    "relationships": {
+      "PART_OF": {
+        "target": "Rack",
         "direction": "out"
       }
     }

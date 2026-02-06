@@ -1,0 +1,41 @@
+{% if label == 'Rack' %}
+<div class="bg-white p-6 rounded-lg shadow border border-gray-200">
+    <h4 class="text-lg font-medium text-gray-900 mb-4">Rack Elevation Diagram</h4>
+
+    {% if rack_units %}
+        <p class="text-sm text-gray-600 mb-4">
+            Total Height: {{ rack_units|length }} U
+        </p>
+
+        <div class="rack-elevation grid grid-cols-1 gap-1 border border-gray-300 rounded bg-gray-50 p-2 max-h-[600px] overflow-y-auto">
+            {% for unit in rack_units %}
+                <div class="rack-unit flex items-center justify-between h-10 border-b border-gray-200 px-4 text-sm"
+                     style="background-color: {% cycle '#fef3c7' '#f3f4f6' %}">
+                    <span class="font-medium min-w-[60px]">U{{ unit.number }}</span>
+
+                    {% if unit.device %}
+                        <a href="{% url 'cmdb:node_detail' unit.device.target_label unit.device.target_id %}" 
+                           class="text-indigo-600 hover:text-indigo-800 hover:underline">
+                            {{ unit.device.target_name|default:unit.device.target_id|truncatechars:30 }}
+                        </a>
+                    {% else %}
+                        <span class="text-gray-500 italic">Empty</span>
+                    {% endif %}
+
+                    {% if unit.status %}
+                        <span class="text-xs text-gray-500 ml-4">({{ unit.status }})</span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        {% if error %}
+            <div class="p-4 bg-red-100 text-red-800 rounded">
+                {{ error }}
+            </div>
+        {% else %}
+            <p class="text-gray-500 text-center py-8">No rack units defined or height not set</p>
+        {% endif %}
+    {% endif %}
+</div>
+{% endif %}

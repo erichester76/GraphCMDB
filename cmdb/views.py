@@ -9,6 +9,8 @@ import json
 from django.views.decorators.http import require_http_methods
 from neomodel import db, RelationshipTo
 from django.template import Context, Template
+from django.conf import settings
+import importlib
 
 @require_http_methods(["GET", "POST"])
 def type_register(request):
@@ -261,6 +263,17 @@ def node_detail(request, label, element_id):
                 'source_name': row[3] or row[1][:50] + '...',
             })
 
+        feature_pack_tabs = []
+        for tab in getattr(settings, 'FEATURE_PACK_TABS', []):
+            if label in tab.get('for_labels', []):
+                tab_copy = tab.copy()
+                if tab.get('custom_view'):
+                    # Call the pack's custom view function
+                    pack_view = importlib.import_module(tab['custom_view'].rsplit('.', 1)[0])
+                    custom_view_func = getattr(pack_view, tab['custom_view'].rsplit('.', 1)[1])
+                    tab_copy['context'] = custom_view_func(request, label, element_id)
+                feature_pack_tabs.append(tab_copy)
+
         context = {
             'label': label,
             'element_id': element_id,
@@ -269,6 +282,7 @@ def node_detail(request, label, element_id):
             'outbound_relationships': out_rels,
             'inbound_relationships': in_rels,
             'all_labels': TypeRegistry.known_labels(),
+            'feature_pack_tabs': feature_pack_tabs
         }
         return render(request, 'cmdb/node_detail.html', context)
 

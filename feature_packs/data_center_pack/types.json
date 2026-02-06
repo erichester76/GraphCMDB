@@ -1,0 +1,94 @@
+{
+  "Rack_Unit": {
+    "display_name": "Rack Unit",
+    "category": "Data Center",
+    "properties": [
+      "unit_number",
+      "status"
+    ],
+    "required": [
+      "unit_number"
+    ],
+    "relationships": {
+      "PART_OF": {
+        "target": "Rack",
+        "direction": "out"
+      }
+    }
+  },
+  "Rack": {
+    "display_name": "Rack / Cabinet",
+    "category": "Data Center",
+    "properties": [
+      "name",
+      "height_units",
+      "width",
+      "depth_mm",
+      "model",
+      "serial_number"
+    ],
+    "required": [
+      "name",
+      "height_units"
+    ],
+    "relationships": {
+      "LOCATED_IN": {
+        "target": "Row",
+        "direction": "out"
+      },
+      "HAS_UNIT": {
+        "target": "Rack_Unit",
+        "direction": "out"
+      }
+    }
+  },
+  "Row": {
+    "display_name": "Data Center Row",
+    "category": "Data Center",
+    "properties": [
+      "name",
+      "row_number",
+      "aisle",
+      "description"
+    ],
+    "required": [
+      "name",
+      "row_number"
+    ],
+    "relationships": {
+      "HAS_RACK": {
+        "target": "Rack",
+        "direction": "out"
+      },
+      "LOCATED_IN": {
+        "target": "Room",
+        "direction": "out"
+      }
+    }
+  },
+  "Room": {
+    "display_name": "Data Center Room",
+    "category": "Data Center",
+    "properties": [
+      "name",
+      "room_number",
+      "floor",
+      "square_footage",
+      "cooling_capacity_kw"
+    ],
+    "required": [
+      "name",
+      "room_number"
+    ],
+    "relationships": {
+      "LOCATED_IN": {
+        "target": "Site",
+        "direction": "out"
+      },
+      "CONTAINS": {
+        "target": "Row",
+        "direction": "out"
+      }
+    }
+  }
+}

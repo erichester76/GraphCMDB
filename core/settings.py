@@ -15,6 +15,7 @@ INSTALLED_APPS = [
     'django_htmx',
     'graphene_django',          # GraphQL support
     'cmdb.apps.CmdbConfig',     # our app
+    'core.apps.CoreConfig',     # core app with feature pack loading
 ]
 
 MIDDLEWARE = [

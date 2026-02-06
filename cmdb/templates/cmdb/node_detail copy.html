@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}{{ label }} Detail{% endblock %}
+
+{% block page_title %}{{ label }}: {{ element_id|truncatechars:12 }}...{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded-lg p-6">
+    <!-- Node Header with Edit/Delete -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">{{ label }} Detail</h1>
+        <div class="flex gap-4">
+        <!-- Edit Node Button -->
+        {% if label and element_id %}
+            <button 
+                @click="openEditModal = true"
+                hx-get="{% url 'cmdb:node_edit' label element_id %}"
+                hx-target="#edit-modal-content"
+                hx-swap="innerHTML"
+                hx-trigger="click"
+                class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm">
+                Edit Node
+            </button>
+        {% endif %}
+
+        <!-- Delete Node Button -->
+        {% if label and element_id %}
+            <button 
+                hx-post="{% url 'cmdb:node_delete' label element_id %}"
+                hx-confirm="Delete this node? This cannot be undone."
+                hx-target="#main-content"
+                hx-swap="innerHTML"
+                hx-on::after-request="if(event.detail.successful) { window.location.href = '{% url 'cmdb:nodes_list' label %}'; }"
+                class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm">
+                Delete Node
+            </button>
+        {% endif %}
+        </div>
+    </div>
+
+    <!-- Tabs Container -->
+    <div x-data="{ activeTab: 'core' }" class="space-y-6">
+        <!-- Tab Navigation -->
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button 
+                    @click="activeTab = 'core'"
+                    :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'core', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'core' }"
+                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Core Details
+                </button>
+
+                <!-- Dynamic tabs from feature packs -->
+                {% for pack_tab in feature_pack_tabs %}
+                    <button 
+                        @click="activeTab = '{{ pack_tab.id }}'"
+                        :class="{ 'border-indigo-500 text-indigo-600': activeTab === '{{ pack_tab.id }}', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== '{{ pack_tab.id }}' }"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        {{ pack_tab.name }}
+                    </button>
+                {% endfor %}
+            </nav>
+        </div>
+
+        <!-- Tab Panels -->
+        <div>
+            <!-- Core Details Panel -->
+            <div x-show="activeTab === 'core'" x-transition>
+               <!-- Properties -->
+                <div class="mb-8">
+                    {% if properties_list %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {% for prop in properties_list %}
+                                <div class="bg-gray-50 p-4 rounded border border-gray-200">
+                                    <dt class="text-sm font-medium text-gray-700">{{ prop.key }}</dt>
+                                    <dd class="mt-1 text-sm text-gray-900 break-words">
+                                        {% if prop.value_type == "str" %}
+                                            {{ prop.value }}
+                                        {% elif prop.value_type == "int" or prop.value_type == "float" %}
+                                            {{ prop.value }}
+                                        {% elif prop.value_type == "bool" %}
+                                            {{ prop.value|yesno:"Yes,No" }}
+                                        {% elif prop.value_type == "list" %}
+                                            <ul class="list-disc pl-5 text-sm">
+                                                {% for item in prop.value %}
+                                                    <li>{{ item }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <pre class="text-xs font-mono">{{ prop.value|pprint|safe }}</pre>
+                                        {% endif %}
+                                        <span class="text-xs text-gray-500">({{ prop.value_type }})</span>
+                                    </dd>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-gray-500">No custom properties</p>
+                    {% endif %}
+                </div>
+
+            <div id="relationships-section">
+                    <div x-data="{ openAddRelModal: false }">
+                        <div class="flex justify-between items-center mb-4">
+                        <!-- Add Relationship Button -->
+                        {% if label and element_id %}
+                            <button 
+                                @click="openAddRelModal = true"
+                                hx-get="{% url 'cmdb:node_add_relationship_form' label element_id %}"
+                                hx-target="#add-rel-modal-content"
+                                hx-swap="innerHTML"
+                                hx-trigger="click"
+                                class="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700">
+                                + Add Relationship
+                            </button>
+                        {% endif %}
+                        </div>
+                        <div x-show="openAddRelModal" x-transition class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+                            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="openAddRelModal = false" aria-hidden="true"></div>
+
+                            <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                                <div class="relative bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full sm:p-6">
+                                    <div class="absolute top-0 right-0 pt-4 pr-4">
+                                        <button @click="openAddRelModal = false" class="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                                            <span class="sr-only">Close</span>
+                                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div id="add-rel-modal-content">
+                                        <p class="text-gray-500">Loading form...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Outgoing -->
+                    {% if outbound_relationships %}
+                        <ul class="space-y-2 mb-6">
+                            {% for rel_type, targets in outbound_relationships.items %}
+                                <li class="text-sm">
+                                    <strong>{{ rel_type }}</strong> →
+                                    {% for t in targets %}
+                                        <a href="{% url 'cmdb:node_detail' t.target_label t.target_id %}" class="text-indigo-600 hover:text-indigo-800">
+                                            {{ t.target_label }}:{{ t.target_name|default:t.target_id }}
+                                        </a>
+                                        <button hx-post="{% url 'cmdb:node_disconnect' label element_id %}"
+                                                hx-vars='{ "rel_type": "{{ rel_type }}", "target_id": "{{ t.target_id }}", "target_label": "{{ t.target_label }}" }'
+                                                hx-target="#relationships-section"
+                                                hx-swap="innerHTML"
+                                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                                hx-confirm="Disconnect this relationship?"
+                                                class="ml-2 text-red-600 text-xs hover:underline">
+                                            Disconnect
+                                        </button>
+                                        {% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    <!-- Incoming -->
+                    {% if inbound_relationships %}
+                        <ul class="space-y-2">
+                            {% for rel_type, sources in inbound_relationships.items %}
+                                <li class="text-sm">
+                                    <strong>{{ rel_type }}</strong> ←
+                                        {% for s in sources %}
+                                        <a href="{% url 'cmdb:node_detail' s.source_label s.source_id %}" class="text-indigo-600 hover:text-indigo-800">
+                                            {{ s.source_label }}:{{ s.source_name|default:s.source_id }}
+                                        </a>
+                                        {% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Feature Pack Panels -->
+            {% for pack_tab in feature_pack_tabs %}
+                <div x-show="activeTab === '{{ pack_tab.id }}'" x-transition>
+                    {% include pack_tab.template with node=node label=label element_id=element_id %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+<!-- Edit Modal (placeholder - filled by HTMX) -->
+<dialog id="edit-modal" class="p-6 bg-white rounded-lg shadow-xl max-w-lg w-full">
+    <div id="edit-modal-content"></div>
+</dialog>
+
+</div>
+{% endblock %}

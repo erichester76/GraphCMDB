@@ -1,0 +1,22 @@
+{% if label == 'Row' %}
+<div class="bg-white p-6 rounded-lg shadow border border-gray-200">
+    <h4 class="text-lg font-medium text-gray-900 mb-4">Row Layout</h4>
+    <p class="text-sm text-gray-600 mb-4">Racks in this row</p>
+
+    <div class="flex flex-wrap gap-4">
+        {% for rack in relationships.HAS_RACK %}
+            <div class="rack-square flex flex-col items-center justify-center w-32 h-48 bg-gray-100 border border-gray-300 rounded shadow p-4 text-center">
+                <div class="text-lg font-medium">{{ rack.target_name|default:rack.target_id|truncatechars:15 }}</div>
+                <div class="text-sm text-gray-600 mt-2">
+                    {{ rack.target_height_units }} U
+                </div>
+                <a href="{% url 'cmdb:node_detail' rack.target_label rack.target_id %}" class="text-indigo-600 text-xs hover:underline mt-2">
+                    View Details
+                </a>
+            </div>
+        {% empty %}
+            <p class="text-gray-500">No racks in this row yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
