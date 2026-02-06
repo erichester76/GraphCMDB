@@ -3,20 +3,12 @@ from typing import Dict, Any, List, Optional
 import json
 from pathlib import Path
 
-REGISTRY_FILE = Path(__file__).parent / 'registry_data.json'  # cmdb/registry_data.json
-
 class TypeRegistry:
     _types: Dict[str, Dict[str, Any]] = {}
 
     @classmethod
     def register(cls, label: str, metadata: Dict[str, Any]):
         cls._types[label] = metadata
-        try:
-            with open(REGISTRY_FILE, 'w') as f:
-                json.dump(cls._types, f, indent=2)
-            print(f"Saved registry to {REGISTRY_FILE}")
-        except Exception as e:
-            print(f"Failed to save registry: {e}")
 
     @classmethod
     def get_metadata(cls, label: str) -> Dict[str, Any]:
@@ -54,14 +46,3 @@ class TypeRegistry:
 
 registry = TypeRegistry()
 
-# Load persisted data if file exists
-if REGISTRY_FILE.exists():
-    try:
-        with open(REGISTRY_FILE, 'r') as f:
-            loaded = json.load(f)
-            for label, meta in loaded.items():
-                registry.register(label, meta)
-        print(f"Loaded {len(loaded)} types from {REGISTRY_FILE}")
-    except Exception as e:
-        print(f"Failed to load registry: {e}")
-        

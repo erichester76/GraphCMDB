@@ -10,7 +10,11 @@
       "unit_number"
     ],
     "relationships": {
-      "LOCATED_IN": {
+      "OCCUPIED_BY": {
+        "target": "Device",
+        "direction": "out"
+      },
+      "PART_OF": {
         "target": "Rack",
         "direction": "out"
       }
@@ -23,12 +27,15 @@
       "name",
       "height",
       "width",
-      "depth",
-      "model"
+      "model",
+      "serial_number",
+      "location",
+      "rack_number"
     ],
     "required": [
       "name",
-      "height"
+      "height",
+      "rack_number"
     ],
     "relationships": {
       "LOCATED_IN": {
@@ -42,12 +49,13 @@
     "category": "Data Center",
     "properties": [
       "name",
-      "row_number",
-      "aisle",
-      "description"
+      "description",
+      "orientation",
+      "row_number"
     ],
     "required": [
       "name",
+      "orientation",
       "row_number"
     ],
     "relationships": {
@@ -62,18 +70,16 @@
     "category": "Data Center",
     "properties": [
       "name",
-      "room_number",
-      "floor",
-      "square_footage",
-      "cooling_capacity_kw"
+      "description",
+      "orientation"
     ],
     "required": [
       "name",
-      "room_number"
+      "orientation"
     ],
     "relationships": {
       "LOCATED_IN": {
-        "target": "Site",
+        "target": "Floor",
         "direction": "out"
       }
     }

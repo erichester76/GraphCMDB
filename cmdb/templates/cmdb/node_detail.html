@@ -21,7 +21,7 @@
                 <button 
                     hx-post="{% url 'cmdb:node_delete' label node.element_id %}"  
                     hx-confirm="Delete this node? This action cannot be undone."
-                    hx-target="#nodes-content"
+                    hx-target="#main-content"
                     hx-swap="innerHTML"
                     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
                     class="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">
