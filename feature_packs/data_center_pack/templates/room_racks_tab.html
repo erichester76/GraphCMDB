@@ -4,22 +4,24 @@
     {% if custom_data %}
         <div class="space-y-6">
             {% for row in custom_data %}
-                <div class="border p-4 rounded bg-gray-50">
-                    <div class="font-medium text-lg">{{ row.name }} (Row {{ row.row_number }})</div>
+                <div>
+                <a href="{% url 'cmdb:node_detail' row.label row.id %}" class="text-indigo-600 text-s hover:underline mt-2">
+                    Row {{ row.name }}
+                </a>
+                </div>
+                <div class="border p-3 rounded bg-gray-50">
                     {% if row.racks %}
-                        <div class="mt-4 flex flex-wrap gap-4">
+                        <div class="mt-1 flex flex-wrap gap-4">
                             {% for rack in row.racks %}
                                 <div class="rack-square flex flex-col items-center justify-center w-32 h-48 bg-white border border-gray-300 rounded shadow p-4 text-center">
-                                    <div class="text-lg font-medium">{{ rack.name }}</div>
+                                    <div class="text-lg font-medium">
+                                        <a href="{% url 'cmdb:node_detail' rack.label rack.id %}" class="text-indigo-600 text-s hover:underline mt-2">
+                                            {{ rack.name }}
+                                        </a>
+                                    </div>
                                     <div class="text-sm text-gray-600 mt-2">
                                         {{ rack.height }} U
                                     </div>
-                                    <div class="text-xs text-gray-500 mt-1">
-                                        Position: {{ rack.rack_number }}
-                                    </div>
-                                    <a href="{% url 'cmdb:node_detail' rack.label rack.id %}" class="text-indigo-600 text-xs hover:underline mt-2">
-                                        View Rack
-                                    </a>
                                 </div>
                             {% endfor %}
                         </div>
