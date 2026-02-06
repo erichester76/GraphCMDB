@@ -10,7 +10,7 @@
       "unit_number"
     ],
     "relationships": {
-      "PART_OF": {
+      "LOCATED_IN": {
         "target": "Rack",
         "direction": "out"
       }
@@ -21,23 +21,18 @@
     "category": "Data Center",
     "properties": [
       "name",
-      "height_units",
+      "height",
       "width",
-      "depth_mm",
-      "model",
-      "serial_number"
+      "depth",
+      "model"
     ],
     "required": [
       "name",
-      "height_units"
+      "height"
     ],
     "relationships": {
       "LOCATED_IN": {
         "target": "Row",
-        "direction": "out"
-      },
-      "HAS_UNIT": {
-        "target": "Rack_Unit",
         "direction": "out"
       }
     }
@@ -90,5 +85,24 @@
         "direction": "out"
       }
     }
+  },
+  "Device": {
+    "display_name": "Device",
+    "category": "Data Center",
+    "properties": [
+      "name",
+      "model",
+      "manufacturer",
+      "serial_number"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {  
+      "OCCUPIES": {
+        "target": "Rack_Unit",
+        "direction": "out"
+      }
   }
+}
 }

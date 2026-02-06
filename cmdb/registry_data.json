@@ -1,64 +1,17 @@
 {
-  "Site": {
-    "display_name": "Site / Location",
-    "category": "Organization",
+  "Rack_Unit": {
+    "display_name": "Rack Unit",
+    "category": "Data Center",
     "properties": [
-      "name",
-      "address",
-      "city",
-      "state",
-      "postal_code",
-      "country"
+      "unit_number",
+      "status"
     ],
     "required": [
-      "name"
-    ],
-    "relationships": {
-      "MANAGED_BY": {
-        "target": "Person",
-        "direction": "out"
-      }
-    }
-  },
-  "Device": {
-    "display_name": "Device / Server / Network Equipment",
-    "category": "Infrastructure",
-    "properties": [
-      "name",
-      "serial"
-    ],
-    "required": [
-      "name"
+      "unit_number"
     ],
     "relationships": {
       "LOCATED_IN": {
         "target": "Rack",
-        "direction": "out"
-      },
-      "OF_TYPE": {
-        "target": "Device_Type",
-        "direction": "out"
-      },
-      "MANAGED_BY": {
-        "target": "Person",
-        "direction": "out"
-      }
-    }
-  },
-  "Device_Type": {
-    "display_name": "Device Type / Model",
-    "category": "Infrastructure",
-    "properties": [
-      "name",
-      "size"
-    ],
-    "required": [
-      "name",
-      "size"
-    ],
-    "relationships": {
-      "PROVIDED_BY": {
-        "target": "Vendor",
         "direction": "out"
       }
     }
@@ -68,39 +21,18 @@
     "category": "Data Center",
     "properties": [
       "name",
-      "height_units",
+      "height",
       "width",
-      "depth_mm",
-      "model",
-      "serial_number"
+      "depth",
+      "model"
     ],
     "required": [
       "name",
-      "height_units"
+      "height"
     ],
     "relationships": {
       "LOCATED_IN": {
         "target": "Row",
-        "direction": "out"
-      },
-      "HAS_UNIT": {
-        "target": "Rack_Unit",
-        "direction": "out"
-      }
-    }
-  },
-  "Rack_Position": {
-    "display_name": "Rack Position",
-    "category": "Data Center",
-    "properties": [
-      "name"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "PART_OF": {
-        "target": "Rack",
         "direction": "out"
       }
     }
@@ -154,454 +86,21 @@
       }
     }
   },
-  "Person": {
-    "display_name": "Person / Employee",
-    "category": "Organization",
-    "properties": [
-      "name",
-      "email",
-      "phone"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "MEMBER_OF": {
-        "target": "Department",
-        "direction": "out"
-      },
-      "MANAGER_OF": {
-        "target": "Department",
-        "direction": "out"
-      }
-    }
-  },
-  "Department": {
-    "display_name": "Department / Team",
-    "category": "Organization",
-    "properties": [
-      "name"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "PART_OF": {
-        "target": "Department",
-        "direction": "out"
-      }
-    }
-  },
-  "Application": {
-    "display_name": "Application / Software",
-    "category": "Software",
-    "properties": [
-      "name",
-      "version",
-      "vendor"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "INSTALLED_ON": {
-        "target": "Device",
-        "direction": "out"
-      }
-    }
-  },
-  "Network": {
-    "display_name": "Network / Subnet",
-    "category": "IPAM",
-    "properties": [
-      "cidr",
-      "gateway"
-    ],
-    "required": [
-      "cidr"
-    ],
-    "relationships": {
-      "CHILD_OF": {
-        "target": "Network",
-        "direction": "out"
-      }
-    }
-  },
-  "IP_Address": {
-    "display_name": "IP Address",
-    "category": "IPAM",
-    "properties": [
-      "name",
-      "type"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "PART_OF": {
-        "target": "Network",
-        "direction": "out"
-      },
-      "ASSIGNED_TO": {
-        "target": "Mac_Address",
-        "direction": "out"
-      }
-    }
-  },
-  "Vendor": {
-    "display_name": "Vendor / Supplier",
-    "category": "Organization",
-    "properties": [
-      "name",
-      "contact_info"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {}
-  },
-  "Virtual_Machine": {
-    "display_name": "Virtual Machine",
-    "category": "Virtualization",
-    "properties": [
-      "name",
-      "host",
-      "os"
-    ],
-    "required": [
-      "name",
-      "host"
-    ],
-    "relationships": {
-      "HOSTED_ON": {
-        "target": "Virtual_Cluster",
-        "direction": "out"
-      }
-    }
-  },
-  "Virtual_Cluster": {
-    "display_name": "Virtual Cluster",
-    "category": "Virtualization",
-    "properties": [
-      "name",
-      "description"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "LOCATED_IN": {
-        "target": "Site",
-        "direction": "out"
-      }
-    }
-  },
-  "Container": {
-    "display_name": "Container",
-    "category": "Virtualization",
-    "properties": [
-      "name",
-      "image",
-      "status"
-    ],
-    "required": [
-      "name",
-      "image"
-    ],
-    "relationships": {
-      "RUNS_ON": {
-        "target": "Virtual_Machine",
-        "direction": "out"
-      }
-    }
-  },
-  "Firewall_Rule": {
-    "display_name": "Firewall Rule",
-    "category": "Security",
-    "properties": [
-      "name",
-      "source",
-      "destination",
-      "action"
-    ],
-    "required": [
-      "name",
-      "source",
-      "destination",
-      "action"
-    ],
-    "relationships": {}
-  },
-  "Zone": {
-    "display_name": "Security Zone",
-    "category": "Security",
-    "properties": [
-      "name",
-      "description"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {}
-  },
-  "DNS_Zone": {
-    "display_name": "DNS Zone",
-    "category": "DNS",
-    "properties": [
-      "name",
-      "ttl"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {}
-  },
-  "DNS_Record": {
-    "display_name": "DNS Record",
-    "category": "DNS",
-    "properties": [
-      "name",
-      "type"
-    ],
-    "required": [
-      "name",
-      "type"
-    ],
-    "relationships": {
-      "PART_OF": {
-        "target": "DNS_Zone",
-        "direction": "out"
-      },
-      "RESOLVES_TO": {
-        "target": "IP_Address",
-        "direction": "out"
-      }
-    }
-  },
-  "DNS_View": {
-    "display_name": "DNS View",
-    "category": "DNS",
-    "properties": [
-      "name",
-      "description"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {}
-  },
-  "DHCP_Scope": {
-    "display_name": "DHCP Scope",
-    "category": "DHCP",
-    "properties": [
-      "name",
-      "range_start",
-      "range_end"
-    ],
-    "required": [
-      "name",
-      "range_start",
-      "range_end"
-    ],
-    "relationships": {}
-  },
-  "DHCP_Lease": {
-    "display_name": "DHCP Lease",
-    "category": "DHCP",
-    "properties": [
-      "name",
-      "type",
-      "lease_time"
-    ],
-    "required": [
-      "name",
-      "type"
-    ],
-    "relationships": {
-      "ASSIGNED_FROM": {
-        "target": "DHCP_Scope",
-        "direction": "out"
-      },
-      "ASSIGNED_TO": {
-        "target": "IP_Address",
-        "direction": "out"
-      },
-      "BELONGS_TO": {
-        "target": "Mac_Address",
-        "direction": "out"
-      }
-    }
-  },
-  "Interface": {
-    "display_name": "Network Interface",
-    "category": "Networking",
-    "properties": [
-      "name",
-      "speed"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "BELONGS_TO": {
-        "target": "Device",
-        "direction": "out"
-      }
-    }
-  },
-  "Mac_Address": {
-    "display_name": "MAC Address",
-    "category": "Networking",
-    "properties": [
-      "name",
-      "type"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "ASSIGNED_TO": {
-        "target": "Interface",
-        "direction": "out"
-      }
-    }
-  },
-  "Cable": {
-    "display_name": "Network Cable",
-    "category": "Networking",
-    "properties": [
-      "type",
-      "length"
-    ],
-    "required": [
-      "type"
-    ],
-    "relationships": {
-      "CONNECTS": {
-        "target": "Interface",
-        "direction": "out"
-      }
-    }
-  },
-  "Circuit": {
-    "display_name": "Network Circuit",
-    "category": "Networking",
-    "properties": [
-      "name",
-      "type",
-      "bandwidth"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "CONNECTED_USING": {
-        "target": "Cable",
-        "direction": "out"
-      },
-      "PROVIDED_BY": {
-        "target": "Vendor",
-        "direction": "out"
-      }
-    }
-  },
-  "Power_Outlet": {
-    "display_name": "Power Outlet",
-    "category": "Power",
-    "properties": [
-      "name",
-      "capacity"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "SUPPLIES_POWER_TO": {
-        "target": "Device",
-        "direction": "out"
-      }
-    }
-  },
-  "Power_Source": {
-    "display_name": "Power Source",
-    "category": "Power",
-    "properties": [
-      "name",
-      "type"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {}
-  },
-  "Power_Connection": {
-    "display_name": "Power Connection",
-    "category": "Power",
-    "properties": [
-      "name",
-      "capacity"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "CONNECTS": {
-        "target": "Power_Outlet",
-        "direction": "out"
-      }
-    }
-  },
-  "Power_Circuit": {
-    "display_name": "Power Circuit",
-    "category": "Power",
-    "properties": [
-      "name",
-      "capacity"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "PART_OF": {
-        "target": "Power_Distribution_Unit",
-        "direction": "out"
-      }
-    }
-  },
-  "Power_Distribution_Unit": {
-    "display_name": "Power Distribution Unit",
-    "category": "Power",
-    "properties": [
-      "name",
-      "capacity"
-    ],
-    "required": [
-      "name"
-    ],
-    "relationships": {
-      "LOCATED_IN": {
-        "target": "Rack",
-        "direction": "out"
-      },
-      "FEED_BY": {
-        "target": "Power_Source",
-        "direction": "out"
-      }
-    }
-  },
-  "Rack_Unit": {
-    "display_name": "Rack Unit",
+  "Device": {
+    "display_name": "Device",
     "category": "Data Center",
     "properties": [
-      "unit_number",
-      "status"
+      "name",
+      "model",
+      "manufacturer",
+      "serial_number"
     ],
     "required": [
-      "unit_number"
+      "name"
     ],
     "relationships": {
-      "PART_OF": {
-        "target": "Rack",
+      "OCCUPIES": {
+        "target": "Rack_Unit",
         "direction": "out"
       }
     }

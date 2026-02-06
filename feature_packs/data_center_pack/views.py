@@ -30,9 +30,9 @@ def rack_elevation_tab(request, label, element_id):
         context['node'] = node
 
         # Get height_units
-        height = node.custom_properties.get('height_units', 0)
+        height = node.custom_properties.get('height', 0)
         if not height:
-            context['error'] = "No height_units defined for this rack"
+            context['error'] = "No height defined for this rack"
             return context
 
         height = int(height)
@@ -40,17 +40,27 @@ def rack_elevation_tab(request, label, element_id):
         # Fetch units and devices
         units_query = f"""
             MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            OPTIONAL MATCH (n)-[:HAS_UNIT]->(u:Rack_Unit)
-            OPTIONAL MATCH (u)-[:OCCUPIED_BY]->(d:Device)
+            MATCH (n)<-[:LOCATED_IN]-(u:Rack_Unit)
+            OPTIONAL MATCH (u)<-[:OCCUPIES]-(d:Device)
+
+            WITH 
+                u,
+                apoc.convert.fromJsonMap(u.custom_properties) AS u_props,
+                d,
+                apoc.convert.fromJsonMap(d.custom_properties) AS d_props
+
             RETURN 
-                u.unit_number AS unit_number,
-                u.status AS unit_status,
-                d.elementId AS device_id,
-                d.custom_properties.name AS device_name,
-                labels(d)[0] AS device_label
-            ORDER BY u.unit_number DESC
+                COALESCE(u_props.unit_number, 'unknown')    AS unit_number,
+                COALESCE(u_props.status, 'unknown')         AS unit_status,
+                elementId(d)                                AS device_id,
+                COALESCE(d_props.name, 'Unnamed')           AS device_name,
+                COALESCE(labels(d)[0], 'Unknown')           AS device_label
+            ORDER BY COALESCE(toInteger(u_props.unit_number), 0) DESC
         """
         units_result, _ = db.cypher_query(units_query, {'eid': element_id})
+
+        print(f"{units_result}")  # Debugging line
+
 
         unit_map = {}
         for row in units_result:
@@ -74,6 +84,8 @@ def rack_elevation_tab(request, label, element_id):
                 'device': None,
             })
             rack_units.append(unit)
+            
+        print(f"{rack_units}")  # Debugging line
 
         context['rack_units'] = rack_units
 
