@@ -266,6 +266,10 @@ def room_racks_tab(request, label, element_id):
                     row_racks = sorted(row_racks, key=lambda r: r['rack_number'])
                 elif row_orientation == 'RightToLeft':
                     row_racks = sorted(row_racks, key=lambda r: r['rack_number'], reverse=True)
+                elif row_orientation == 'TopToBottom':
+                    row_racks = sorted(row_racks, key=lambda r: r['rack_number'])
+                elif row_orientation == 'BottomToTop':
+                    row_racks = sorted(row_racks, key=lambda r: r['rack_number'], reverse=True)
                 else:
                     # Fallback to alphabetical by name if orientation is invalid or missing
                     row_racks = sorted(row_racks, key=lambda r: r['name'])
@@ -286,9 +290,9 @@ def room_racks_tab(request, label, element_id):
         elif room_orientation == 'BottomToTop':
             room_rows = sorted(room_rows, key=lambda r: r['row_number'], reverse=True)
         elif room_orientation == 'LeftToRight':
-            room_rows = sorted(room_rows, key=lambda r: r['name'])
+            room_rows = sorted(room_rows, key=lambda r: r['row_number'])
         elif room_orientation == 'RightToLeft':
-            room_rows = sorted(room_rows, key=lambda r: r['name'], reverse=True)
+            room_rows = sorted(room_rows, key=lambda r: r['row_number'], reverse=True)
 
         context['custom_data'] = room_rows
         

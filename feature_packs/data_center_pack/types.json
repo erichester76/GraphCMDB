@@ -7,7 +7,9 @@
       "status"
     ],
     "required": [
-      "unit_number"
+      "name",
+      "unit_number",
+      "side"
     ],
     "relationships": {
       "OCCUPIED_BY": {
@@ -27,10 +29,10 @@
       "name",
       "height",
       "width",
-      "model",
+      "depth",
       "serial_number",
-      "location",
-      "rack_number"
+      "rack_number",
+      "status"
     ],
     "required": [
       "name",
@@ -51,7 +53,8 @@
       "name",
       "description",
       "orientation",
-      "row_number"
+      "row_number",
+      "status"
     ],
     "required": [
       "name",
@@ -71,7 +74,8 @@
     "properties": [
       "name",
       "description",
-      "orientation"
+      "orientation",
+      "status"
     ],
     "required": [
       "name",
@@ -112,7 +116,8 @@
       "name",
       "description",
       "rack_units",
-      "depth"
+      "depth",
+      "status"
     ],
     "required": [
       "name"
