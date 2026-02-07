@@ -144,7 +144,7 @@ def nodes_list(request, label):
     default_columns = metadata.get('columns', [])
     all_properties = metadata.get('properties', [])
     
-    # Extract property values for each node based on columns
+    # Extract property values for each node - FOR ALL PROPERTIES, not just default columns
     nodes_data = []
     for node in nodes:
         props = node.custom_properties or {}
@@ -154,9 +154,9 @@ def nodes_list(request, label):
             'columns': {}
         }
         
-        # Extract values for each configured column
-        for col in default_columns:
-            node_data['columns'][col] = props.get(col, '')
+        # Extract values for ALL properties (so DOM elements exist for column toggle)
+        for prop in all_properties:
+            node_data['columns'][prop] = props.get(prop, '')
         
         # Also compute display_name for backwards compatibility
         if 'name' in props:
