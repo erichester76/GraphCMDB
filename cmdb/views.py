@@ -104,14 +104,11 @@ def dashboard(request):
     counts = {}
     for label in labels:
         try:
-            # Raw Cypher count - always accurate, no neomodel quirks
-            result, _ = db.cypher_query(f"""
-                MATCH (n:`{label}`)
-                RETURN count(n) AS cnt
-            """)
-            count = result[0][0] if result else 0
+            # Use Neomodel's count method instead of raw Cypher
+            node_class = DynamicNode.get_or_create_label(label)
+            count = node_class.nodes.count()
             counts[label] = count
-            print(f"Dashboard Cypher count for {label}: {count}")
+            print(f"Dashboard Neomodel count for {label}: {count}")
         except Exception as e:
             print(f"Error counting {label}: {e}")
             counts[label] = 0
@@ -181,17 +178,10 @@ def node_add_relationship_form(request, label, element_id):
 def node_detail(request, label, element_id):
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        query = f"""
-            MATCH (n:`{label}`)
-            WHERE elementId(n) = $eid
-            RETURN n
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
+        # Use helper method instead of raw Cypher
+        node = node_class.get_by_element_id(element_id)
+        if not node:
             raise node_class.DoesNotExist
-
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
 
         props_list = []
         for key, value in (node.custom_properties or {}).items():
@@ -296,17 +286,10 @@ def node_edit(request, label, element_id):
     
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        query = f"""
-            MATCH (n:`{label}`)
-            WHERE elementId(n) = $eid
-            RETURN n
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
+        # Use helper method instead of raw Cypher
+        node = node_class.get_by_element_id(element_id)
+        if not node:
             raise node_class.DoesNotExist
-
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
 
     except node_class.DoesNotExist:
         return JsonResponse({'error': 'Node not found'}, status=404)
@@ -405,18 +388,11 @@ def node_edit(request, label, element_id):
 def node_delete(request, label, element_id):
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        # Cypher lookup
-        query = f"""
-            MATCH (n:`{label}`)
-            WHERE elementId(n) = $eid
-            RETURN n
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
+        # Use helper method instead of raw Cypher
+        node = node_class.get_by_element_id(element_id)
+        if not node:
             return JsonResponse({'error': 'Node not found'}, status=404)
 
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
         node.delete()
 
         # Return refreshed table body (same as nodes_list partial)

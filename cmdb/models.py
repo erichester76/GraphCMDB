@@ -1,5 +1,5 @@
 # cmdb/models.py
-from neomodel import StructuredNode, JSONProperty, config
+from neomodel import StructuredNode, JSONProperty, config, db
 from django.conf import settings
 from cmdb.registry import TypeRegistry
 
@@ -28,3 +28,21 @@ class DynamicNode(StructuredNode):
 
         _LABEL_REGISTRY[label_name] = new_class
         return new_class
+    
+    @classmethod
+    def get_by_element_id(cls, element_id: str):
+        """
+        Retrieve a node by its Neo4j element ID.
+        Returns the inflated node or None if not found.
+        """
+        query = f"""
+            MATCH (n:`{cls.__label__}`)
+            WHERE elementId(n) = $eid
+            RETURN n
+        """
+        result, _ = db.cypher_query(query, {'eid': element_id})
+        if not result:
+            return None
+        
+        raw_node = result[0][0]
+        return cls.inflate(raw_node)
