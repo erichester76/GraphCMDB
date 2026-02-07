@@ -144,35 +144,43 @@
             <!-- Top bar -->
             <header class="shadow-sm" :class="darkMode ? 'bg-gray-800' : 'bg-white'">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="py-4 flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <button @click="sidebarOpen = !sidebarOpen; localStorage.setItem('sidebarOpen', sidebarOpen)"
-                                    aria-label="Toggle sidebar"
-                                    class="p-2 rounded-md"
-                                    :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'">
-                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                                </svg>
-                            </button>
-                            <h1 class="text-xl font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                                {% block page_title %}{% endblock %}
-                            </h1>
-                        </div>
+                    <div class="py-4 flex items-center gap-4">
+                        <!-- Far left: Hamburger menu -->
+                        <button @click="sidebarOpen = !sidebarOpen; localStorage.setItem('sidebarOpen', sidebarOpen)"
+                                aria-label="Toggle sidebar"
+                                class="p-2 rounded-md"
+                                :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                        
+                        <!-- Center-left: Page title -->
+                        <h1 class="text-xl font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                            {% block page_title %}{% endblock %}
+                        </h1>
+                        
+                        <!-- Spacer to push right items to the right -->
+                        <div class="flex-1"></div>
+                        
+                        <!-- Center-right: Header actions -->
                         <div class="flex items-center gap-4">
-                            <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)"
-                                    aria-label="Toggle dark mode"
-                                    class="p-2 rounded-md"
-                                    :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'"
-                                    title="Toggle dark mode">
-                                <svg x-show="!darkMode" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                                </svg>
-                                <svg x-show="darkMode" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                                </svg>
-                            </button>
                             {% block header_actions %}{% endblock %}
                         </div>
+                        
+                        <!-- Far right: Dark mode toggle -->
+                        <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)"
+                                aria-label="Toggle dark mode"
+                                class="p-2 rounded-md"
+                                :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'"
+                                title="Toggle dark mode">
+                            <svg x-show="!darkMode" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                            <svg x-show="darkMode" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </header>
