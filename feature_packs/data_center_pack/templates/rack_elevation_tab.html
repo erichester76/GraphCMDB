@@ -1,40 +1,40 @@
 {% if label == 'Rack' %}
-<div class="bg-white p-6 rounded-lg shadow border border-gray-200">
-    <h4 class="text-lg font-medium text-gray-900 mb-4">Rack Elevation Diagram</h4>
+<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Rack Elevation Diagram</h4>
 
     {% if custom_data %}
-        <p class="text-sm text-gray-600 mb-4">
+        <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
             Total Height: {{ custom_data|length }} U
         </p>
 
-            <div class="mx-auto max-w-[400px] border border-gray-300 rounded bg-gray-50 p-2 max-h-[600px] overflow-y-auto shadow-inner">
+            <div class="mx-auto max-w-[400px] border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 p-2 max-h-[600px] overflow-y-auto shadow-inner">
                 {% for unit in custom_data %}
-                <div class="rack-unit flex items-center justify-between h-10 border-b border-gray-200 px-4 text-sm"
+                <div class="rack-unit flex items-center justify-between h-10 border-b border-gray-200 dark:border-gray-700 px-4 text-sm"
                      style="background-color: {% cycle '#fef3c7' '#f3f4f6' %}">
                     <span class="font-medium min-w-[60px]">U{{ unit.number }}</span>
 
                     {% if unit.device %}
                         <a href="{% url 'cmdb:node_detail' unit.device.target_label unit.device.target_id %}" 
-                           class="text-indigo-600 hover:text-indigo-800 hover:underline">
+                           class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
                             {{ unit.device.target_name|default:unit.device.target_id|truncatechars:30 }}
                         </a>
                     {% else %}
-                        <span class="text-gray-500 italic">Empty</span>
+                        <span class="text-gray-500 dark:text-gray-400 italic">Empty</span>
                     {% endif %}
 
                     {% if unit.status %}
-                        <span class="text-xs text-gray-500 ml-4">({{ unit.status }})</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400 ml-4">({{ unit.status }})</span>
                     {% endif %}
                 </div>
             {% endfor %}
         </div>
     {% else %}
         {% if error %}
-            <div class="p-4 bg-red-100 text-red-800 rounded">
+            <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
                 {{ error }}
             </div>
         {% else %}
-            <p class="text-gray-500 text-center py-8">No rack units defined or height not set</p>
+            <p class="text-gray-500 dark:text-gray-400 text-center py-8">No rack units defined or height not set</p>
         {% endif %}
     {% endif %}
 </div>

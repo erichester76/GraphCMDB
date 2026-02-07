@@ -1,43 +1,43 @@
 {% if label == 'Room' %}
-<div class="bg-white p-6 rounded-lg shadow border border-gray-200">
-    <h4 class="text-lg font-medium text-gray-900 mb-4">Room Overview</h4>
+<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Room Overview</h4>
     {% if custom_data %}
         <div class="space-y-6">
             {% for row in custom_data %}
                 <div>
-                <a href="{% url 'cmdb:node_detail' row.label row.id %}" class="text-indigo-600 text-s hover:underline mt-2">
+                <a href="{% url 'cmdb:node_detail' row.label row.id %}" class="text-indigo-600 dark:text-indigo-400 text-s hover:underline mt-2">
                     Row {{ row.name }}
                 </a>
                 </div>
-                <div class="border p-3 rounded bg-gray-50">
+                <div class="border border-gray-200 dark:border-gray-700 p-3 rounded bg-gray-50 dark:bg-gray-700">
                     {% if row.racks %}
                         <div class="mt-1 flex flex-wrap gap-4">
                             {% for rack in row.racks %}
-                                <div class="rack-square flex flex-col items-center justify-center w-32 h-48 bg-white border border-gray-300 rounded shadow p-4 text-center">
+                                <div class="rack-square flex flex-col items-center justify-center w-32 h-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow p-4 text-center">
                                     <div class="text-lg font-medium">
-                                        <a href="{% url 'cmdb:node_detail' rack.label rack.id %}" class="text-indigo-600 text-s hover:underline mt-2">
+                                        <a href="{% url 'cmdb:node_detail' rack.label rack.id %}" class="text-indigo-600 dark:text-indigo-400 text-s hover:underline mt-2">
                                             {{ rack.name }}
                                         </a>
                                     </div>
-                                    <div class="text-sm text-gray-600 mt-2">
+                                    <div class="text-sm text-gray-600 dark:text-gray-300 mt-2">
                                         {{ rack.height }}U
                                     </div>
                                 </div>
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="text-gray-500 mt-4">No racks in this row yet.</p>
+                        <p class="text-gray-500 dark:text-gray-400 mt-4">No racks in this row yet.</p>
                     {% endif %}
                 </div>
             {% endfor %}
         </div>
     {% else %}
         {% if error %}
-            <div class="p-4 bg-red-100 text-red-800 rounded">
+            <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
                 {{ error }}
             </div>
         {% else %}
-            <p class="text-gray-500 text-center py-8">No rows in this room yet.</p>
+            <p class="text-gray-500 dark:text-gray-400 text-center py-8">No rows in this room yet.</p>
         {% endif %}
     {% endif %}
 </div>
