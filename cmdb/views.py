@@ -159,13 +159,8 @@ def nodes_list(request, label):
             'properties': props
         })
     
-    # Sort property keys for consistent display
-    sorted_property_keys = sorted(all_property_keys)
-    
-    # Prioritize 'name' if it exists
-    if 'name' in sorted_property_keys:
-        sorted_property_keys.remove('name')
-        sorted_property_keys.insert(0, 'name')
+    # Sort property keys for consistent display, prioritizing 'name' first
+    sorted_property_keys = sorted(all_property_keys, key=lambda k: (k != 'name', k))
             
     context = {
         'label': label,
