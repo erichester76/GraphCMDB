@@ -150,7 +150,7 @@ function listViewManager(label, defaultColumns, allProperties) {
     return {
         label: label,
         availableColumns: allProperties,
-        visibleColumns: defaultColumns,
+        visibleColumns: defaultColumns.slice(), // Clone array to avoid mutation
         filterText: '',
         dropdownOpen: false,
         
@@ -226,5 +226,25 @@ function listViewManager(label, defaultColumns, allProperties) {
         }
     };
 }
+
+// Listen for HTMX afterSwap event to reinitialize Alpine.js components
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+    // Check if the swap included OOB elements (header updates)
+    if (evt.detail.xhr && evt.detail.xhr.responseText) {
+        const response = evt.detail.xhr.responseText;
+        // If response contains hx-swap-oob, it means header was updated
+        if (response.includes('hx-swap-oob')) {
+            // Force Alpine to re-evaluate the new elements
+            // Wait a tick to ensure DOM is fully updated
+            setTimeout(() => {
+                const headerActions = document.getElementById('header-actions');
+                if (headerActions && window.Alpine) {
+                    // Re-initialize Alpine on the header-actions element
+                    window.Alpine.initTree(headerActions);
+                }
+            }, 10);
+        }
+    }
+});
 </script>
 {% endblock %}
