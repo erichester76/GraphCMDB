@@ -84,6 +84,7 @@
                                            hx-swap="innerHTML"
                                            hx-push-url="true"
                                            hx-indicator="#main-content .htmx-indicator"
+                                           onclick="updateSidebarHighlight(this)"
                                            class="flex items-center px-3 py-2 text-sm font-medium rounded-md group-hover:pr-20 {% if request.resolver_match.kwargs.label == label %}bg-indigo-50 text-indigo-700 dark:bg-indigo-600 dark:text-white{% else %}text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700{% endif %}">
                                             {% if categories_metadata|get_item:label and categories_metadata|get_item:label.icon %}
                                                 <span class="mr-2">{{ categories_metadata|get_item:label.icon }}</span>
@@ -217,78 +218,18 @@
 
     <!-- Update sidebar highlights on HTMX navigation -->
     <script>
-        document.body.addEventListener('htmx:afterSwap', function(evt) {
-            console.log('HTMX afterSwap event', evt.detail);
-            // Only update sidebar if we're navigating to a node list
-            if (evt.detail.target && evt.detail.target.id === 'main-content') {
-                console.log('Updating sidebar highlight after main-content swap');
-                updateSidebarHighlight();
-            }
-        });
-
-        // Also update on popstate (browser back/forward)
-        window.addEventListener('popstate', function() {
-            console.log('Popstate event - updating sidebar');
-            updateSidebarHighlight();
-        });
-
-        function updateSidebarHighlight() {
-            // Get current URL path
-            const path = window.location.pathname;
-            console.log('updateSidebarHighlight - current path:', path);
-            
-            // Extract label from path like /nodes/{label}
-            const match = path.match(/\/nodes\/([^\/]+)/);
-            if (!match) {
-                console.log('No match found in path');
-                return;
-            }
-            
-            const currentLabel = match[1];
-            console.log('Current label:', currentLabel);
-            
-            // Update all sidebar links
-            const links = document.querySelectorAll('aside a[href*="/nodes/"]');
-            console.log('Found', links.length, 'sidebar links');
-            
-            links.forEach(link => {
-                const linkPath = link.getAttribute('href');
-                const linkMatch = linkPath.match(/\/nodes\/([^\/]+)/);
-                
-                if (linkMatch) {
-                    const linkLabel = linkMatch[1];
-                    const isActive = linkLabel === currentLabel;
-                    
-                    console.log(`Link ${linkLabel}: isActive=${isActive}`);
-                    
-                    // Remove all state classes (both regular and dark: variants)
-                    link.classList.remove(
-                        'bg-indigo-600', 'text-white',                    // Old dark mode active
-                        'text-gray-300', 'hover:bg-gray-700',              // Old dark mode inactive
-                        'bg-indigo-50', 'text-indigo-700',                 // Light mode active
-                        'text-gray-700', 'hover:bg-gray-50',               // Light mode inactive
-                        'dark:bg-indigo-600', 'dark:text-white',           // Dark mode active with prefix
-                        'dark:text-gray-300', 'dark:hover:bg-gray-700'     // Dark mode inactive with prefix
-                    );
-                    
-                    // Add appropriate classes based on state
-                    // Using Tailwind's dark: variant for automatic dark mode handling
-                    if (isActive) {
-                        link.classList.add('bg-indigo-50', 'text-indigo-700', 'dark:bg-indigo-600', 'dark:text-white');
-                    } else {
-                        link.classList.add('text-gray-700', 'hover:bg-gray-50', 'dark:text-gray-300', 'dark:hover:bg-gray-700');
-                    }
-                }
+        // Simple onclick handler to update sidebar highlight
+        function updateSidebarHighlight(clickedLink) {
+            // Remove active classes from all sidebar links
+            document.querySelectorAll('aside a[href*="/nodes/"]').forEach(link => {
+                link.classList.remove('bg-indigo-50', 'text-indigo-700', 'dark:bg-indigo-600', 'dark:text-white');
+                link.classList.add('text-gray-700', 'hover:bg-gray-50', 'dark:text-gray-300', 'dark:hover:bg-gray-700');
             });
             
-            console.log('Sidebar highlight update complete');
+            // Add active classes to clicked link
+            clickedLink.classList.remove('text-gray-700', 'hover:bg-gray-50', 'dark:text-gray-300', 'dark:hover:bg-gray-700');
+            clickedLink.classList.add('bg-indigo-50', 'text-indigo-700', 'dark:bg-indigo-600', 'dark:text-white');
         }
-
-        // Run once on page load to ensure correct initial state
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOMContentLoaded - initializing sidebar highlight');
-            updateSidebarHighlight();
-        });
     </script>
 
     {% block extra_js %}{% endblock %}
