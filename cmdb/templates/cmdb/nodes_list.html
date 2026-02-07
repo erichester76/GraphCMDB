@@ -227,23 +227,60 @@ function listViewManager(label, defaultColumns, allProperties) {
     };
 }
 
-// Listen for HTMX afterSwap event to reinitialize Alpine.js components
-document.body.addEventListener('htmx:afterSwap', function(evt) {
-    // Check if the swap included OOB elements (header updates)
-    if (evt.detail.xhr && evt.detail.xhr.responseText) {
-        const response = evt.detail.xhr.responseText;
-        // If response contains hx-swap-oob, it means header was updated
-        if (response.includes('hx-swap-oob')) {
-            // Force Alpine to re-evaluate the new elements
-            // Wait a tick to ensure DOM is fully updated
-            setTimeout(() => {
-                const headerActions = document.getElementById('header-actions');
-                if (headerActions && window.Alpine) {
-                    // Re-initialize Alpine on the header-actions element
-                    window.Alpine.initTree(headerActions);
+// Better approach: Listen for htmx:oobAfterSwap which fires specifically for OOB swaps
+document.body.addEventListener('htmx:oobAfterSwap', function(evt) {
+    console.log('OOB swap detected:', evt.detail);
+    // Get the element that was swapped
+    const target = evt.detail.target;
+    if (target && target.id === 'header-actions') {
+        console.log('Header actions swapped, reinitializing Alpine...');
+        // Small delay to ensure Alpine has processed the DOM
+        setTimeout(() => {
+            const element = document.getElementById('header-actions');
+            if (element) {
+                // Try to access Alpine and reinitialize
+                if (typeof Alpine !== 'undefined' && Alpine.initTree) {
+                    console.log('Using Alpine.initTree');
+                    Alpine.initTree(element);
+                } else if (window.Alpine && window.Alpine.initTree) {
+                    console.log('Using window.Alpine.initTree');
+                    window.Alpine.initTree(element);
+                } else {
+                    // Fallback: trigger a custom event that we can use
+                    console.log('Alpine not available, trying data refresh');
+                    // Force Alpine to notice the new element by dispatching an event
+                    element.dispatchEvent(new CustomEvent('alpine-init'));
                 }
-            }, 10);
-        }
+            }
+        }, 50);
+    }
+});
+
+// Also try the main afterSwap event with better detection
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+    console.log('HTMX afterSwap:', evt.detail);
+    // This fires for the main content swap, check if we need to update header
+    if (evt.detail.target && evt.detail.target.id === 'main-content') {
+        console.log('Main content swapped');
+        // The OOB swap should have already happened
+        // But let's make sure Alpine processes the new header
+        setTimeout(() => {
+            const headerActions = document.getElementById('header-actions');
+            if (headerActions) {
+                const xDataAttr = headerActions.querySelector('[x-data]');
+                if (xDataAttr) {
+                    console.log('Found x-data element in header, forcing evaluation');
+                    // Try multiple approaches
+                    if (typeof Alpine !== 'undefined') {
+                        if (Alpine.initTree) {
+                            Alpine.initTree(xDataAttr);
+                        } else if (Alpine.start) {
+                            Alpine.start();
+                        }
+                    }
+                }
+            }
+        }, 100);
     }
 });
 </script>

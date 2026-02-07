@@ -1,10 +1,12 @@
 <h1 id="page-title" class="text-xl font-semibold text-gray-900 dark:text-white" hx-swap-oob="true">
     {{ label }} Nodes
 </h1>
-<div id="header-actions" hx-swap-oob="true">
+<div id="header-actions" 
+     hx-swap-oob="true"
+     hx-on::after-swap="console.log('Header swapped via OOB'); if(window.Alpine){Alpine.nextTick(()=>console.log('Alpine tick'));}">
     <div class="flex items-center gap-4" 
          x-data="listViewManager('{{ label }}', {{ columns_json }}, {{ all_properties_json }})"
-         x-init="init()">
+         x-init="console.log('Alpine init for:', label, 'columns:', availableColumns); init();">
         
         <!-- Column Selector -->
         <div class="relative" @click.away="dropdownOpen = false">
