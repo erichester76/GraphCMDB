@@ -44,7 +44,7 @@
     {% endif %}
 
     <!-- Tabbed Content -->
-    <div x-data="{ activeTab: '{% if feature_pack_tabs and feature_pack_tabs.0.tab_order == 0 %}{{ feature_pack_tabs.0.id }}{% else %}core{% endif %}' }" class="space-y-6">
+    <div x-data="{ activeTab: '{{ initial_active_tab }}' }" class="space-y-6">
         <!-- Tab Navigation -->
         <div class="border-b border-gray-200">
             <nav class="-mb-px flex space-x-8" aria-label="Tabs">
@@ -91,8 +91,8 @@
                         <dl class="space-y-2">
                             {% for prop in properties_list %}
                                 <div class="py-2 border-b border-gray-200">
-                                    <dt class="text-sm font-medium text-gray-700 inline-block w-48">{{ prop.key }}:</dt>
-                                    <dd class="text-sm text-gray-900 inline-block">
+                                    <dt class="text-sm font-medium text-gray-700 inline-block align-top min-w-[12rem] max-w-[16rem] break-words">{{ prop.key }}:</dt>
+                                    <dd class="text-sm text-gray-900 inline-block align-top">
                                         {% if prop.is_relationship %}
                                             <a href="{% url 'cmdb:node_detail' prop.target_label prop.target_id %}" 
                                                class="text-indigo-600 hover:text-indigo-800 hover:underline">
@@ -160,19 +160,21 @@
                     <!-- Incoming relationships section for reference -->
                     {% if inbound_relationships %}
                         <h3 class="text-lg font-medium text-gray-900 mb-4 mt-6">Incoming Relationships</h3>
-                        <ul class="space-y-2">
+                        <dl class="space-y-2">
                             {% for rel_type, sources in inbound_relationships.items %}
-                                <li class="text-sm py-2 border-b border-gray-200">
-                                    <span class="text-sm font-medium text-gray-700 inline-block w-48">{{ rel_type }}:</span>
+                                <div class="py-2 border-b border-gray-200">
+                                    <dt class="text-sm font-medium text-gray-700 inline-block align-top min-w-[12rem] max-w-[16rem] break-words">{{ rel_type }}:</dt>
+                                    <dd class="text-sm text-gray-900 inline-block align-top">
                                         {% for s in sources %}
                                         <a href="{% url 'cmdb:node_detail' s.source_label s.source_id %}" class="text-indigo-600 hover:text-indigo-800 hover:underline">
                                             {{ s.source_label }}:{{ s.source_name|default:s.source_id }}
                                         </a>
                                         {% if not forloop.last %}, {% endif %}
                                     {% endfor %}
-                                </li>
+                                    </dd>
+                                </div>
                             {% endfor %}
-                        </ul>
+                        </dl>
                     {% endif %}
                 </div>
             </div>

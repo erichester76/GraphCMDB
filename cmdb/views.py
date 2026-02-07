@@ -235,14 +235,17 @@ def node_detail(request, label, element_id):
         
         # Add relationships as property-like entries
         for rel_type, targets in out_rels.items():
+            if not targets:  # Skip if no targets
+                continue
+                
             # Get the target label from the type registry relationship definition
             type_meta = TypeRegistry.get_metadata(label)
             relationships = type_meta.get('relationships', {})
             rel_def = relationships.get(rel_type, {})
-            target_label = rel_def.get('target', targets[0]['target_label'] if targets else 'Unknown')
             
             # Create a property-like entry for each relationship
             for target in targets:
+                target_label = rel_def.get('target', target['target_label'])
                 props_list.append({
                     'key': target_label,
                     'value': target['target_name'],
@@ -289,6 +292,8 @@ def node_detail(request, label, element_id):
             if label in tab.get('for_labels', []):
                 tab_copy = tab.copy()
                 # Set default tab_order if not specified
+                # Tab ordering: 0 = first (before Core Details), 1 = Core Details, 2+ = after Core Details
+                # Valid range: 0-100 (sorted left to right)
                 if 'tab_order' not in tab_copy:
                     tab_copy['tab_order'] = 2  # Default feature pack tabs come after core details (1)
                 if tab.get('custom_view'):
@@ -298,8 +303,13 @@ def node_detail(request, label, element_id):
                     tab_copy['context'] = custom_view_func(request, label, element_id)
                 feature_pack_tabs.append(tab_copy)
         
-        # Sort tabs by tab_order (0-100, left to right)
+        # Sort tabs by tab_order (0-100 range, left to right)
         feature_pack_tabs.sort(key=lambda x: x.get('tab_order', 2))
+        
+        # Determine initial active tab: first tab with order 0, otherwise 'core'
+        initial_active_tab = 'core'
+        if feature_pack_tabs and feature_pack_tabs[0].get('tab_order') == 0:
+            initial_active_tab = feature_pack_tabs[0]['id']
 
         context = {
             'label': label,
@@ -309,7 +319,8 @@ def node_detail(request, label, element_id):
             'outbound_relationships': out_rels,
             'inbound_relationships': in_rels,
             'all_labels': TypeRegistry.known_labels(),
-            'feature_pack_tabs': feature_pack_tabs
+            'feature_pack_tabs': feature_pack_tabs,
+            'initial_active_tab': initial_active_tab,
         }
         return render(request, 'cmdb/node_detail.html', context)
 
