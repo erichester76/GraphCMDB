@@ -121,6 +121,13 @@ def dashboard(request):
         'counts': counts,
         'all_labels': labels,
     }
+    
+    # If HTMX request, include header partial for out-of-band swap
+    if request.htmx:
+        content_html = render_to_string('cmdb/partials/dashboard_content.html', context, request=request)
+        header_html = render_to_string('cmdb/partials/dashboard_header.html', context, request=request)
+        return HttpResponse(content_html + header_html)
+    
     return render(request, 'cmdb/dashboard.html', context)
 
 def nodes_list(request, label):
@@ -153,9 +160,15 @@ def nodes_list(request, label):
         'all_labels': TypeRegistry.known_labels(),
     }
 
-    # If request is from HTMX (partial refresh), return only the table
+    # If request is from HTMX, return content + header for OOB swap
     if request.htmx:
-        return render(request, 'cmdb/partials/nodes_table.html', context)
+        # Check if this is a table-only refresh (from refresh button)
+        if request.headers.get('HX-Target') == 'nodes-content':
+            return render(request, 'cmdb/partials/nodes_table.html', context)
+        # Otherwise it's a full navigation, include header
+        content_html = render_to_string('cmdb/partials/nodes_list_content.html', context, request=request)
+        header_html = render_to_string('cmdb/partials/nodes_list_header.html', context, request=request)
+        return HttpResponse(content_html + header_html)
 
     return render(request, 'cmdb/nodes_list.html', context)
 
@@ -284,6 +297,13 @@ def node_detail(request, label, element_id):
             'all_labels': TypeRegistry.known_labels(),
             'feature_pack_tabs': feature_pack_tabs
         }
+        
+        # If HTMX request, include header partial for out-of-band swap
+        if request.htmx:
+            content_html = render_to_string('cmdb/partials/node_detail_content.html', context, request=request)
+            header_html = render_to_string('cmdb/partials/node_detail_header.html', context, request=request)
+            return HttpResponse(content_html + header_html)
+        
         return render(request, 'cmdb/node_detail.html', context)
 
     except node_class.DoesNotExist as e:

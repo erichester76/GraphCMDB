@@ -1,10 +1,3 @@
-{% extends "base.html" %}
-
-{% block title %}{{ label }} Detail - {{ element_id|truncatechars:12 }}...{% endblock %}
-
-{% block page_title %}{{ label }}: {{ element_id|truncatechars:12 }}...{% endblock %}
-
-{% block content %}
 <div class="bg-white shadow rounded-lg p-6">
     <!-- Node Header with Actions -->
     <div class="flex justify-between items-center mb-6">
@@ -185,4 +178,3 @@
     <div id="edit-modal-content"></div>
 </dialog>
 </div>
-{% endblock %}
