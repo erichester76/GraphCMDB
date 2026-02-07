@@ -124,9 +124,9 @@ def dashboard(request):
     
     # If HTMX request, include header partial for out-of-band swap
     if request.htmx:
-        dashboard_html = render_to_string('cmdb/dashboard.html', context, request=request)
+        content_html = render_to_string('cmdb/partials/dashboard_content.html', context, request=request)
         header_html = render_to_string('cmdb/partials/dashboard_header.html', context, request=request)
-        return HttpResponse(dashboard_html + header_html)
+        return HttpResponse(content_html + header_html)
     
     return render(request, 'cmdb/dashboard.html', context)
 
@@ -166,9 +166,9 @@ def nodes_list(request, label):
         if request.headers.get('HX-Target') == 'nodes-content':
             return render(request, 'cmdb/partials/nodes_table.html', context)
         # Otherwise it's a full navigation, include header
-        nodes_list_html = render_to_string('cmdb/nodes_list.html', context, request=request)
+        content_html = render_to_string('cmdb/partials/nodes_list_content.html', context, request=request)
         header_html = render_to_string('cmdb/partials/nodes_list_header.html', context, request=request)
-        return HttpResponse(nodes_list_html + header_html)
+        return HttpResponse(content_html + header_html)
 
     return render(request, 'cmdb/nodes_list.html', context)
 
@@ -300,9 +300,9 @@ def node_detail(request, label, element_id):
         
         # If HTMX request, include header partial for out-of-band swap
         if request.htmx:
-            detail_html = render_to_string('cmdb/node_detail.html', context, request=request)
+            content_html = render_to_string('cmdb/partials/node_detail_content.html', context, request=request)
             header_html = render_to_string('cmdb/partials/node_detail_header.html', context, request=request)
-            return HttpResponse(detail_html + header_html)
+            return HttpResponse(content_html + header_html)
         
         return render(request, 'cmdb/node_detail.html', context)
 
