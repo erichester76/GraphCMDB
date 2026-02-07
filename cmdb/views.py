@@ -683,7 +683,7 @@ def get_target_nodes(request):
         node_class = DynamicNode.get_or_create_label(target_label)
         nodes = node_class.nodes.all()[:50]
 
-        sorted_nodes = sorted(nodes, key=lambda n: n.custom_properties.get('name', n.element_id))
+        sorted_nodes = sorted(nodes, key=lambda n: n.get_property('name', n.element_id))
 
         # Load the partial template manually as string
         template = Template(open('cmdb/templates/cmdb/partials/target_node_options.html').read())

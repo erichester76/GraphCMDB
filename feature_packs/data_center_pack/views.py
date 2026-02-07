@@ -25,7 +25,7 @@ def rack_elevation_tab(request, label, element_id):
         context['node'] = node
 
         # Get height_units
-        height = node.custom_properties.get('height', 0)
+        height = node.get_property('height', 0)
         if not height:
             context['error'] = "No height defined for this rack"
             return context
@@ -167,8 +167,8 @@ def room_racks_tab(request, label, element_id):
 
         context['node'] = node
 
-        # Get room orientation from custom properties (handle None case)
-        room_orientation = (node.custom_properties or {}).get('orientation', 'LeftToRight')
+        # Get room orientation from custom properties (using helper method)
+        room_orientation = node.get_property('orientation', 'LeftToRight')
         context['room_orientation'] = room_orientation
         
         print(f"DEBUG: Room orientation: {room_orientation} for room {element_id}")

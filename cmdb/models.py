@@ -1,4 +1,5 @@
 # cmdb/models.py
+import re
 from neomodel import StructuredNode, JSONProperty, config, db
 from django.conf import settings
 from cmdb.registry import TypeRegistry
@@ -19,7 +20,6 @@ class DynamicNode(StructuredNode):
 
         # Validate label name follows Neo4j conventions (alphanumeric, underscore, no special chars)
         # This prevents potential injection and ensures valid Neo4j labels
-        import re
         if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', label_name):
             raise ValueError(f"Invalid label name: {label_name}. Must be alphanumeric with underscores only.")
 
@@ -34,6 +34,13 @@ class DynamicNode(StructuredNode):
 
         _LABEL_REGISTRY[label_name] = new_class
         return new_class
+    
+    def get_property(self, key: str, default=None):
+        """
+        Safely retrieve a property from custom_properties with null handling.
+        Returns the property value or the provided default if not found or if custom_properties is None.
+        """
+        return (self.custom_properties or {}).get(key, default)
     
     @classmethod
     def get_by_element_id(cls, element_id: str):
