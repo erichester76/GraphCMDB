@@ -2,14 +2,7 @@
 
 {% block title %}{{ label }} Detail - {{ element_id|truncatechars:12 }}...{% endblock %}
 
-{% block page_title %}
-{{ label }} :: 
-{% for prop in properties_list %}
-{% if prop.key == 'name' %}
-    {{ prop.value }}
-{% endif %}
-{% endfor %}
-{% endblock %}
+{% block page_title %}{{ label }} :: {{ display_name }}{% endblock %}
 
 {% block header_actions %}
     <div class="flex items-center gap-4">

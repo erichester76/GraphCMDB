@@ -197,6 +197,7 @@ def node_detail(request, label, element_id):
             raise node_class.DoesNotExist
 
         props_list = []
+        display_name = None
         for key, value in (node.custom_properties or {}).items():
             props_list.append({
                 'key': key,
@@ -204,6 +205,12 @@ def node_detail(request, label, element_id):
                 'value_type': type(value).__name__,
                 'is_relationship': False,
             })
+            if key == 'name' and not display_name:
+                display_name = value
+        
+        # Fallback to element_id if no name property
+        if not display_name:
+            display_name = f"{element_id[:8]}..."
 
         # Use helper methods for relationship queries
         out_rels = node.get_outgoing_relationships()
@@ -237,6 +244,7 @@ def node_detail(request, label, element_id):
             'label': label,
             'element_id': element_id,
             'node': node,
+            'display_name': display_name,
             'properties_list': props_list,
             'outbound_relationships': out_rels,
             'inbound_relationships': in_rels,
