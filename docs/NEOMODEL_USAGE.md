@@ -4,21 +4,24 @@ This document explains when to use Neomodel ORM methods vs raw Cypher queries in
 
 ## General Principle
 
-**Use Neomodel when possible for maintainability, use Cypher when necessary for performance and advanced features.**
+**Use Neomodel abstraction methods when possible for maintainability. Cypher is encapsulated in helper methods.**
 
-## When to Use Neomodel
+## Available Helper Methods
 
-### ✅ Simple CRUD Operations
+### ✅ Node Operations
 ```python
 # Creating nodes
 node = node_class(custom_properties={'name': 'Server1'}).save()
 
 # Reading nodes
 nodes = node_class.nodes.all()
-node = node_class.nodes.get(id=123)
+count = node_class.nodes.count()
 
-# Counting nodes
-count = node_class.nodes.count()  # Instead of MATCH (n:Label) RETURN count(n)
+# Get node by element ID
+node = node_class.get_by_element_id(element_id)
+
+# Get property safely
+value = node.get_property('name', default='Unknown')
 
 # Updating nodes
 node.custom_properties = {'name': 'Server2'}
@@ -28,87 +31,109 @@ node.save()
 node.delete()
 ```
 
-### ✅ Basic Node Retrieval
+### ✅ Relationship Operations
 ```python
-# Use helper method for element ID lookups
-node = node_class.get_by_element_id(element_id)
-if not node:
-    # Handle not found case
+# Get all outgoing relationships
+out_rels = node.get_outgoing_relationships()
+# Returns: {'REL_TYPE': [{'target_id': '...', 'target_label': '...', 'target_name': '...'}]}
+
+# Get all incoming relationships  
+in_rels = node.get_incoming_relationships()
+# Returns: {'REL_TYPE': [{'source_id': '...', 'source_label': '...', 'source_name': '...'}]}
+
+# Create relationship
+DynamicNode.connect_nodes(source_eid, source_label, 'REL_TYPE', target_eid, target_label)
+
+# Delete relationship
+deleted_count = DynamicNode.disconnect_nodes(source_eid, source_label, 'REL_TYPE', target_eid, target_label)
 ```
 
-### ✅ Simple Relationship Operations
-```python
-# Connect nodes
-source.RELATIONSHIP_TYPE.connect(target)
+## When Raw Cypher is Used (Internally)
 
-# Disconnect nodes
-source.RELATIONSHIP_TYPE.disconnect(target)
+The helper methods encapsulate Cypher queries for:
+
+### 1. Element ID Lookups
+Getting nodes by Neo4j element ID requires Cypher since Neomodel uses integer IDs:
+```python
+# In get_by_element_id()
+MATCH (n:`Label`) WHERE elementId(n) = $eid RETURN n
 ```
 
-## When to Use Raw Cypher
-
-### ✅ Complex Graph Traversals
-When you need to traverse multiple levels or match complex patterns:
-```cypher
-MATCH (n:Label) WHERE elementId(n) = $eid
+### 2. Relationship Traversals with APOC
+Getting all relationships with related node metadata:
+```python
+# In get_outgoing_relationships() and get_incoming_relationships()
 MATCH (n)-[r]->(m)
-RETURN type(r), elementId(m), labels(m)[0]
+WITH type(r), elementId(m), labels(m)[0],
+     apoc.convert.fromJsonMap(m.custom_properties) AS props
+RETURN type(r), elementId(m), labels(m)[0], 
+       COALESCE(props.name, props[head(keys(props))]) AS name
 ```
 
-### ✅ APOC Function Calls
-When using APOC for JSON manipulation, aggregations, or other advanced features:
-```cypher
-WITH apoc.convert.fromJsonMap(node.custom_properties) AS props
-RETURN COALESCE(props.name, props.Name, 'Unnamed')
-```
-
-### ✅ Hierarchical Queries
-Multi-level nested relationships (e.g., Room → Row → Rack → Unit):
-```cypher
-MATCH (room:Room) WHERE elementId(room) = $eid
-MATCH (row:Row)-[:LOCATED_IN]->(room)
-MATCH (rack:Rack)-[:LOCATED_IN]->(row)
-RETURN row, rack ORDER BY row.name, rack.name
-```
-
-### ✅ Complex Aggregations and Ordering
-When you need advanced filtering, sorting, or aggregation:
-```cypher
-MATCH (n:Label)-[r]->(m)
-WITH type(r) AS rel_type, count(m) AS target_count
-RETURN rel_type, target_count
-ORDER BY target_count DESC
-```
-
-## Code Organization
-
-### Helper Methods in models.py
-Add reusable methods to `DynamicNode` for common operations:
+### 3. Dynamic Relationship Creation/Deletion
+Creating/deleting relationships with runtime-determined types:
 ```python
-@classmethod
-def get_by_element_id(cls, element_id: str):
-    """Retrieve node by Neo4j element ID"""
-    # Implementation using Cypher when necessary
+# In connect_nodes() and disconnect_nodes()
+MATCH (source:`Label1`) WHERE elementId(source) = $sid
+MATCH (target:`Label2`) WHERE elementId(target) = $tid
+MERGE (source)-[:`DYNAMIC_TYPE`]->(target)
 ```
-
-### Views
-- Use Neomodel methods for simple operations
-- Use raw Cypher for complex queries
-- Keep relationship traversal queries as Cypher (they need element IDs and APOC)
 
 ## Benefits of This Approach
 
-1. **Maintainability**: Simple operations use clean ORM syntax
-2. **Performance**: Complex operations use optimized Cypher
-3. **Consistency**: Clear guidelines for when to use each approach
-4. **Flexibility**: Can leverage both Neomodel and Neo4j's full power
+1. **Clean Views**: Views no longer contain raw Cypher queries
+2. **Centralized Logic**: All Cypher is in the model layer
+3. **Reusability**: Helper methods used across multiple views
+4. **Maintainability**: Changes to query logic only need to be made in one place
+5. **Testability**: Helper methods can be unit tested independently
 
-## Migration Notes
+## Code Organization
 
-We've updated the codebase to follow these guidelines:
-- ✅ Dashboard counts now use `node_class.nodes.count()`
-- ✅ Node retrieval by element ID uses helper method `get_by_element_id()`
-- ✅ Complex relationship queries remain as raw Cypher
-- ✅ APOC-based queries remain as raw Cypher
+### DynamicNode Helper Methods
+All relationship and node operations are now abstracted in `cmdb/models.py`:
 
-This provides the best balance of code clarity and performance.
+```python
+# Node operations
+node = DynamicNode.get_by_element_id(element_id)
+value = node.get_property('key', default)
+
+# Relationship queries
+out_rels = node.get_outgoing_relationships()
+in_rels = node.get_incoming_relationships()
+
+# Relationship mutations
+DynamicNode.connect_nodes(source_eid, source_label, rel_type, target_eid, target_label)
+DynamicNode.disconnect_nodes(source_eid, source_label, rel_type, target_eid, target_label)
+```
+
+### Views Layer
+Views now use clean, abstracted methods:
+- No raw Cypher queries in `cmdb/views.py`
+- Business logic focuses on HTTP handling
+- Data access delegated to model layer
+
+## Feature Pack Integration
+
+Feature packs still use Cypher for domain-specific hierarchical queries (e.g., data center rack layouts) as these require:
+- Multi-level nested relationships
+- Complex APOC aggregations  
+- Domain-specific ordering and filtering
+
+These are kept as Cypher because they are specialized use cases that benefit from Neo4j's query language.
+
+## Migration Summary
+
+### Phase 1 (Completed)
+- ✅ Added `get_by_element_id()` helper method
+- ✅ Added `get_property()` helper method  
+- ✅ Dashboard counts use `node_class.nodes.count()`
+
+### Phase 2 (Completed)
+- ✅ Added `get_outgoing_relationships()` helper method
+- ✅ Added `get_incoming_relationships()` helper method
+- ✅ Added `connect_nodes()` class method
+- ✅ Added `disconnect_nodes()` class method
+- ✅ Updated all views to use helper methods
+- ✅ **Eliminated all raw Cypher from cmdb/views.py**
+
+This provides excellent separation of concerns and code maintainability.
