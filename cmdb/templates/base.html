@@ -57,7 +57,14 @@
                 </a>
 
                 <!-- Grouped Labels by Category (Alpine collapsible) -->
-                <div x-data="{ openCategories: {} }">
+                <div x-data="{ 
+                    activeLabel: '{{ request.resolver_match.kwargs.label|default:'' }}',
+                    openCategories: {
+                        {% for category, labels in categories.items %}
+                            '{{ category }}': {{ 'true' if request.resolver_match.kwargs.label in labels else 'false' }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    }
+                }">
                     {% for category, labels in categories.items %}
                         <div class="space-y-1">
                             <button @click="openCategories['{{ category }}'] = !openCategories['{{ category }}']"
@@ -84,8 +91,11 @@
                                            hx-swap="innerHTML"
                                            hx-push-url="true"
                                            hx-indicator="#main-content .htmx-indicator"
-                                           onclick="updateSidebarHighlight(this)"
-                                           class="flex items-center px-3 py-2 text-sm font-medium rounded-md group-hover:pr-20 {% if request.resolver_match.kwargs.label == label %}bg-indigo-50 text-indigo-700 dark:bg-indigo-600 dark:text-white{% else %}text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700{% endif %}">
+                                           @click="activeLabel = '{{ label }}'"
+                                           class="flex items-center px-3 py-2 text-sm font-medium rounded-md group-hover:pr-20"
+                                           :class="activeLabel === '{{ label }}' ? 
+                                                   (darkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700') : 
+                                                   (darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50')">
                                             {% if categories_metadata|get_item:label and categories_metadata|get_item:label.icon %}
                                                 <span class="mr-2">{{ categories_metadata|get_item:label.icon }}</span>
                                             {% else %}
@@ -215,29 +225,6 @@
             :class="darkMode ? 'bg-gray-800 text-white' : 'bg-white'">
         <div id="create-modal-content"></div>
     </dialog>
-
-    <!-- Update sidebar highlights on HTMX navigation -->
-    <script>
-        // Simple onclick handler to update sidebar highlight
-        function updateSidebarHighlight(clickedLink) {
-            // First, reset ALL sidebar links to inactive state
-            document.querySelectorAll('aside a[href*="/nodes/"]').forEach(link => {
-                // Remove ALL possible classes (both active and inactive states)
-                link.classList.remove(
-                    'bg-indigo-50', 'text-indigo-700',           // Light mode active
-                    'dark:bg-indigo-600', 'dark:text-white',     // Dark mode active
-                    'text-gray-700', 'hover:bg-gray-50',         // Light mode inactive
-                    'dark:text-gray-300', 'dark:hover:bg-gray-700' // Dark mode inactive
-                );
-                // Add inactive state classes to all
-                link.classList.add('text-gray-700', 'hover:bg-gray-50', 'dark:text-gray-300', 'dark:hover:bg-gray-700');
-            });
-            
-            // Then set the clicked link to active state
-            clickedLink.classList.remove('text-gray-700', 'hover:bg-gray-50', 'dark:text-gray-300', 'dark:hover:bg-gray-700');
-            clickedLink.classList.add('bg-indigo-50', 'text-indigo-700', 'dark:bg-indigo-600', 'dark:text-white');
-        }
-    </script>
 
     {% block extra_js %}{% endblock %}
 </body>
