@@ -44,10 +44,22 @@
     {% endif %}
 
     <!-- Tabbed Content -->
-    <div x-data="{ activeTab: 'core' }" class="space-y-6">
+    <div x-data="{ activeTab: '{% if feature_pack_tabs and feature_pack_tabs.0.tab_order == 0 %}{{ feature_pack_tabs.0.id }}{% else %}core{% endif %}' }" class="space-y-6">
         <!-- Tab Navigation -->
         <div class="border-b border-gray-200">
             <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                {% for tab in feature_pack_tabs %}
+                    {% if tab.tab_order == 0 %}
+                        <button 
+                            @click="activeTab = '{{ tab.id }}'"
+                            :class="{ 'border-indigo-500 text-indigo-600': activeTab === '{{ tab.id }}', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== '{{ tab.id }}' }"
+                            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                            {{ tab.name }}
+                        </button>
+                    {% endif %}
+                {% endfor %}
+                
+                <!-- Core Details Tab (tab_order = 1 by default) -->
                 <button 
                     @click="activeTab = 'core'"
                     :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'core', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'core' }"
@@ -56,12 +68,14 @@
                 </button>
 
                 {% for tab in feature_pack_tabs %}
-                    <button 
-                        @click="activeTab = '{{ tab.id }}'"
-                        :class="{ 'border-indigo-500 text-indigo-600': activeTab === '{{ tab.id }}', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== '{{ tab.id }}' }"
-                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                        {{ tab.name }}
-                    </button>
+                    {% if tab.tab_order >= 2 %}
+                        <button 
+                            @click="activeTab = '{{ tab.id }}'"
+                            :class="{ 'border-indigo-500 text-indigo-600': activeTab === '{{ tab.id }}', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== '{{ tab.id }}' }"
+                            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                            {{ tab.name }}
+                        </button>
+                    {% endif %}
                 {% endfor %}
             </nav>
         </div>
@@ -74,17 +88,33 @@
                 <div class="mb-8">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Properties</h3>
                     {% if properties_list %}
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <dl class="space-y-2">
                             {% for prop in properties_list %}
-                                <div class="bg-gray-50 p-4 rounded border border-gray-200">
-                                    <dt class="text-sm font-medium text-gray-700">{{ prop.key }}</dt>
-                                    <dd class="mt-1 text-sm text-gray-900 break-words">
-                                        {{ prop.value }}
-                                        <span class="text-xs text-gray-500">({{ prop.value_type }})</span>
+                                <div class="py-2 border-b border-gray-200">
+                                    <dt class="text-sm font-medium text-gray-700 inline-block w-48">{{ prop.key }}:</dt>
+                                    <dd class="text-sm text-gray-900 inline-block">
+                                        {% if prop.is_relationship %}
+                                            <a href="{% url 'cmdb:node_detail' prop.target_label prop.target_id %}" 
+                                               class="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                                {{ prop.value }}
+                                            </a>
+                                            <button hx-post="{% url 'cmdb:node_disconnect' label element_id %}"
+                                                    hx-vars='{ "rel_type": "{{ prop.rel_type }}", "target_id": "{{ prop.target_id }}", "target_label": "{{ prop.target_label }}" }'
+                                                    hx-target="#main-content"
+                                                    hx-swap="innerHTML"
+                                                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                                    hx-confirm="Disconnect this relationship?"
+                                                    class="ml-2 text-red-600 text-xs hover:underline">
+                                                Disconnect
+                                            </button>
+                                        {% else %}
+                                            {{ prop.value }}
+                                            <span class="text-xs text-gray-500 ml-2">({{ prop.value_type }})</span>
+                                        {% endif %}
                                     </dd>
                                 </div>
                             {% endfor %}
-                        </div>
+                        </dl>
                     {% else %}
                         <p class="text-gray-500">No custom properties</p>
                     {% endif %}
@@ -127,40 +157,15 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Outgoing -->
-                    {% if outbound_relationships %}
-                        <ul class="space-y-2 mb-6">
-                            {% for rel_type, targets in outbound_relationships.items %}
-                                <li class="text-sm">
-                                    <strong>{{ rel_type }}</strong> →
-                                    {% for t in targets %}
-                                        <a href="{% url 'cmdb:node_detail' t.target_label t.target_id %}" class="text-indigo-600 hover:text-indigo-800">
-                                            {{ t.target_label }}:{{ t.target_name|default:t.target_id }}
-                                        </a>
-                                        <button hx-post="{% url 'cmdb:node_disconnect' label element_id %}"
-                                                hx-vars='{ "rel_type": "{{ rel_type }}", "target_id": "{{ t.target_id }}", "target_label": "{{ t.target_label }}" }'
-                                                hx-target="#relationships-section"
-                                                hx-swap="innerHTML"
-                                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                                                hx-confirm="Disconnect this relationship?"
-                                                class="ml-2 text-red-600 text-xs hover:underline">
-                                            Disconnect
-                                        </button>
-                                        {% if not forloop.last %}, {% endif %}
-                                    {% endfor %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-
-                    <!-- Incoming -->
+                    <!-- Incoming relationships section for reference -->
                     {% if inbound_relationships %}
+                        <h3 class="text-lg font-medium text-gray-900 mb-4 mt-6">Incoming Relationships</h3>
                         <ul class="space-y-2">
                             {% for rel_type, sources in inbound_relationships.items %}
-                                <li class="text-sm">
-                                    <strong>{{ rel_type }}</strong> ←
+                                <li class="text-sm py-2 border-b border-gray-200">
+                                    <span class="text-sm font-medium text-gray-700 inline-block w-48">{{ rel_type }}:</span>
                                         {% for s in sources %}
-                                        <a href="{% url 'cmdb:node_detail' s.source_label s.source_id %}" class="text-indigo-600 hover:text-indigo-800">
+                                        <a href="{% url 'cmdb:node_detail' s.source_label s.source_id %}" class="text-indigo-600 hover:text-indigo-800 hover:underline">
                                             {{ s.source_label }}:{{ s.source_name|default:s.source_id }}
                                         </a>
                                         {% if not forloop.last %}, {% endif %}
