@@ -1,0 +1,24 @@
+<h1 id="page-title" class="text-xl font-semibold text-gray-900" hx-swap-oob="true">
+    {{ label }} Nodes
+</h1>
+<div id="header-actions" hx-swap-oob="true">
+    <div class="flex items-center gap-4">
+        <button 
+            hx-get="{% url 'cmdb:node_create' label %}" 
+            hx-target="#create-modal-content"
+            hx-swap="innerHTML"
+            hx-trigger="click"
+            onclick="document.getElementById('create-modal').showModal()"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700">
+            Create {{ label }}
+        </button>
+
+        <button 
+            hx-get="{% url 'cmdb:nodes_list' label %}" 
+            hx-target="#nodes-content"
+            hx-swap="innerHTML"
+            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Refresh
+        </button>
+    </div>
+</div>
