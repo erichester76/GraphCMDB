@@ -173,7 +173,9 @@ def nodes_list(request, label):
         'label': label,
         'nodes': nodes_data,
         'columns': default_columns,
+        'columns_json': json.dumps(default_columns),
         'all_properties': all_properties,
+        'all_properties_json': json.dumps(all_properties),
         'all_labels': TypeRegistry.known_labels(),
     }
 
