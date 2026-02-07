@@ -30,6 +30,8 @@
                x-transition:leave="transition ease-in duration-200"
                x-transition:leave-start="translate-x-0"
                x-transition:leave-end="-translate-x-full"
+               aria-label="Navigation sidebar"
+               :aria-hidden="!sidebarOpen"
                class="w-64 flex-shrink-0 border-r flex flex-col overflow-hidden"
                :class="darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
             <div class="p-6 flex items-center justify-between flex-shrink-0">
@@ -145,6 +147,7 @@
                     <div class="py-4 flex justify-between items-center">
                         <div class="flex items-center gap-3">
                             <button @click="sidebarOpen = !sidebarOpen; localStorage.setItem('sidebarOpen', sidebarOpen)"
+                                    aria-label="Toggle sidebar"
                                     class="p-2 rounded-md"
                                     :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'">
                                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -157,6 +160,7 @@
                         </div>
                         <div class="flex items-center gap-4">
                             <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)"
+                                    aria-label="Toggle dark mode"
                                     class="p-2 rounded-md"
                                     :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'"
                                     title="Toggle dark mode">
@@ -196,7 +200,10 @@
     </div>
 
     <!-- Create Modal (Global) -->
-    <dialog id="create-modal" class="p-6 rounded-lg shadow-xl max-w-lg w-full backdrop:bg-black backdrop:bg-opacity-50"
+    <dialog id="create-modal" 
+            role="dialog"
+            aria-label="Create new item"
+            class="p-6 rounded-lg shadow-xl max-w-lg w-full backdrop:bg-black backdrop:bg-opacity-50"
             :class="darkMode ? 'bg-gray-800 text-white' : 'bg-white'">
         <div id="create-modal-content"></div>
     </dialog>
