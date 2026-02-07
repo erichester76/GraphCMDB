@@ -6,6 +6,19 @@
     sortDirection: 'asc',
     visibleColumns: {{ property_keys_json|safe|default:'[]' }},
     allColumns: {{ property_keys_json|safe|default:'[]' }},
+    label: '{{ label }}',
+    csrfToken: '{{ csrf_token }}',
+    nodesData: {{ nodes_json|safe|default:'[]' }},
+    
+    get nodes() {
+        return this.nodesData.map(node => ({
+            id: node.id,
+            idShort: node.id.substring(0, 12),
+            properties: node.properties,
+            label: this.label,
+            csrfToken: this.csrfToken
+        }));
+    },
     
     toggleColumn(col) {
         const index = this.visibleColumns.indexOf(col);
@@ -29,23 +42,45 @@
         }
     },
     
-    getSortedFilteredRows() {
-        const rows = Array.from(document.querySelectorAll('#data-table tbody tr[data-row]'));
+    getPropertyValue(node, key) {
+        return node.properties[key] || '-';
+    },
+    
+    matchesSearch(node) {
+        if (!this.searchTerm) return true;
+        const searchLower = this.searchTerm.toLowerCase();
         
-        // Filter rows
-        const filtered = rows.filter(row => {
-            if (!this.searchTerm) return true;
-            const text = row.textContent.toLowerCase();
-            return text.includes(this.searchTerm.toLowerCase());
-        });
+        // Search in ID
+        if (node.id.toLowerCase().includes(searchLower)) return true;
         
-        // Sort rows
+        // Search in all properties
+        for (const [key, value] of Object.entries(node.properties)) {
+            if (String(value).toLowerCase().includes(searchLower)) return true;
+        }
+        
+        return false;
+    },
+    
+    get filteredSortedNodes() {
+        let result = this.nodes.filter(node => this.matchesSearch(node));
+        
         if (this.sortColumn) {
-            filtered.sort((a, b) => {
-                const aVal = (a.querySelector(`[data-col='${this.sortColumn}']`)?.textContent || '').trim().toLowerCase();
-                const bVal = (b.querySelector(`[data-col='${this.sortColumn}']`)?.textContent || '').trim().toLowerCase();
+            result = result.sort((a, b) => {
+                let aVal, bVal;
                 
-                // Try numeric comparison first
+                if (this.sortColumn === 'id') {
+                    aVal = a.id;
+                    bVal = b.id;
+                } else {
+                    aVal = a.properties[this.sortColumn] || '';
+                    bVal = b.properties[this.sortColumn] || '';
+                }
+                
+                // Convert to strings for comparison
+                aVal = String(aVal).toLowerCase();
+                bVal = String(bVal).toLowerCase();
+                
+                // Try numeric comparison
                 const aNum = parseFloat(aVal);
                 const bNum = parseFloat(bVal);
                 if (!isNaN(aNum) && !isNaN(bNum)) {
@@ -61,7 +96,7 @@
             });
         }
         
-        return filtered;
+        return result;
     }
 }" class="space-y-4">
     <!-- Search and Column Controls -->
@@ -111,7 +146,7 @@
 
     <!-- Table -->
     <div class="overflow-x-auto">
-        <table id="data-table" class="min-w-full divide-y divide-gray-200">
+        <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -123,70 +158,59 @@
                             </span>
                         </button>
                     </th>
-                    {% for key in property_keys %}
-                    <th 
-                        scope="col" 
-                        x-show="isColumnVisible('{{ key }}')"
-                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                        <button @click="sortBy('{{ key }}')" class="flex items-center hover:text-gray-700">
-                            {{ key }}
-                            <span x-show="sortColumn === '{{ key }}'" class="ml-1">
-                                <span x-show="sortDirection === 'asc'">↑</span>
-                                <span x-show="sortDirection === 'desc'">↓</span>
-                            </span>
-                        </button>
-                    </th>
-                    {% endfor %}
+                    <template x-for="key in allColumns" :key="key">
+                        <th 
+                            scope="col" 
+                            x-show="isColumnVisible(key)"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                            <button @click="sortBy(key)" class="flex items-center hover:text-gray-700">
+                                <span x-text="key"></span>
+                                <span x-show="sortColumn === key" class="ml-1">
+                                    <span x-show="sortDirection === 'asc'">↑</span>
+                                    <span x-show="sortDirection === 'desc'">↓</span>
+                                </span>
+                            </button>
+                        </th>
+                    </template>
                     <th scope="col" class="relative px-6 py-3">
                         <span class="sr-only">Actions</span>
                     </th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                {% for node in nodes %}
-                <tr 
-                    data-row
-                    x-show="getSortedFilteredRows().includes($el)"
-                    :style="{ order: getSortedFilteredRows().indexOf($el) }"
-                    style="display: table-row;"
-                >
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" data-col="id">
-                        {{ node.element_id|slice:":12" }}...
-                    </td>
-                    {% for key in property_keys %}
-                    <td 
-                        x-show="isColumnVisible('{{ key }}')"
-                        class="px-6 py-4 text-sm text-gray-900" 
-                        data-col="{{ key }}"
-                    >
-                        {% if node.custom_properties %}
-                            {{ node.custom_properties|get_item:key|default:"-" }}
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    {% endfor %}
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <a href="{% url 'cmdb:node_detail' label node.element_id %}" class="text-indigo-600 hover:text-indigo-900 mr-3">Detail</a>
-                        <button 
-                            hx-post="{% url 'cmdb:node_delete' label node.element_id %}"  
-                            hx-confirm="Delete this node? This action cannot be undone."
-                            hx-target="#nodes-content"
-                            hx-swap="innerHTML"
-                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                            class="text-red-600 hover:text-red-900">
-                            Delete
-                        </button>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
+                <template x-for="node in filteredSortedNodes" :key="node.id">
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            <span x-text="node.idShort + '...'"></span>
+                        </td>
+                        <template x-for="key in allColumns" :key="key">
+                            <td 
+                                x-show="isColumnVisible(key)"
+                                class="px-6 py-4 text-sm text-gray-900"
+                            >
+                                <span x-text="getPropertyValue(node, key)"></span>
+                            </td>
+                        </template>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a :href="`{% url 'cmdb:node_detail' label='PLACEHOLDER' element_id='PLACEHOLDER' %}`.replace('PLACEHOLDER/PLACEHOLDER', node.label + '/' + node.id)" class="text-indigo-600 hover:text-indigo-900 mr-3">Detail</a>
+                            <button 
+                                @click.prevent="if(confirm('Delete this node? This action cannot be undone.')) { htmx.ajax('POST', `{% url 'cmdb:node_delete' label='PLACEHOLDER' element_id='PLACEHOLDER' %}`.replace('PLACEHOLDER/PLACEHOLDER', node.label + '/' + node.id), {target:'#nodes-content', swap:'innerHTML', headers:{'X-CSRFToken': node.csrfToken}}) }"
+                                class="text-red-600 hover:text-red-900">
+                                Delete
+                            </button>
+                        </td>
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                </template>
+                <tr x-show="filteredSortedNodes.length === 0">
                     <td :colspan="2 + visibleColumns.length" class="px-6 py-12 text-center text-gray-500">
-                        No {{ label }} nodes found
+                        <span x-show="searchTerm">No matching {{ label }} nodes found</span>
+                        <span x-show="!searchTerm">No {{ label }} nodes found</span>
                     </td>
                 </tr>
-                {% endfor %}
             </tbody>
         </table>
     </div>

@@ -135,8 +135,10 @@ def nodes_list(request, label):
         print(f"Error fetching {label}: {e}")
         nodes = []
     
-    # Collect all unique property keys across all nodes
+    # Collect all unique property keys across all nodes and prepare JSON-safe data
     all_property_keys = set()
+    nodes_json = []
+    
     for node in nodes:
         props = node.custom_properties or {}
         all_property_keys.update(props.keys())
@@ -150,6 +152,12 @@ def nodes_list(request, label):
             node.display_name = str(props[first_key])
         else:
             node.display_name = f"Unnamed {label}"
+        
+        # Prepare JSON-safe node data
+        nodes_json.append({
+            'id': node.element_id,
+            'properties': props
+        })
     
     # Sort property keys for consistent display
     sorted_property_keys = sorted(all_property_keys)
@@ -162,6 +170,7 @@ def nodes_list(request, label):
     context = {
         'label': label,
         'nodes': nodes,
+        'nodes_json': json.dumps(nodes_json),
         'all_labels': TypeRegistry.known_labels(),
         'property_keys': sorted_property_keys,
         'property_keys_json': json.dumps(sorted_property_keys),
