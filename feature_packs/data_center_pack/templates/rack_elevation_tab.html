@@ -9,8 +9,7 @@
 
             <div class="mx-auto max-w-[400px] border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 p-2 max-h-[600px] overflow-y-auto shadow-inner">
                 {% for unit in custom_data %}
-                <div class="rack-unit flex items-center justify-between h-10 border-b border-gray-200 dark:border-gray-700 px-4 text-sm"
-                     style="background-color: {% cycle '#fef3c7' '#f3f4f6' %}">
+                 <div class="rack-unit flex items-center justify-between h-10 border-b border-gray-200 dark:border-gray-700 px-4 text-sm {% cycle 'bg-amber-50 dark:bg-amber-950' 'bg-gray-100 dark:bg-gray-800' %}">
                     <span class="font-medium min-w-[60px]">U{{ unit.number }}</span>
 
                     {% if unit.device %}
