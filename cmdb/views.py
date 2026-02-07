@@ -196,8 +196,15 @@ def node_detail(request, label, element_id):
         if not node:
             raise node_class.DoesNotExist
 
+        # Extract display name first
+        custom_props = node.custom_properties or {}
+        display_name = custom_props.get('name')
+        if not display_name:
+            display_name = f"{element_id[:8]}..."
+        
+        # Build properties list
         props_list = []
-        for key, value in (node.custom_properties or {}).items():
+        for key, value in custom_props.items():
             props_list.append({
                 'key': key,
                 'value': value,
@@ -237,6 +244,7 @@ def node_detail(request, label, element_id):
             'label': label,
             'element_id': element_id,
             'node': node,
+            'display_name': display_name,
             'properties_list': props_list,
             'outbound_relationships': out_rels,
             'inbound_relationships': in_rels,
