@@ -1,5 +1,5 @@
 # cmdb/models.py
-import re
+import re  # Used for label validation in get_or_create_label()
 from neomodel import StructuredNode, JSONProperty, config, db
 from django.conf import settings
 from cmdb.registry import TypeRegistry
@@ -18,10 +18,14 @@ class DynamicNode(StructuredNode):
         if label_name in _LABEL_REGISTRY:
             return _LABEL_REGISTRY[label_name]
 
-        # Validate label name follows Neo4j conventions (alphanumeric, underscore, no special chars)
+        # Validate label name follows Neo4j conventions
+        # Must start with letter/underscore, followed by alphanumeric/underscore
         # This prevents potential injection and ensures valid Neo4j labels
         if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', label_name):
-            raise ValueError(f"Invalid label name: {label_name}. Must be alphanumeric with underscores only.")
+            raise ValueError(
+                f"Invalid label name: {label_name}. "
+                "Must start with a letter or underscore, followed by alphanumeric characters or underscores."
+            )
 
         # Create dynamic subclass
         class_name = f"Dynamic{label_name}Node"
