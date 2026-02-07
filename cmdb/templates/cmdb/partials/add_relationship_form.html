@@ -1,4 +1,4 @@
-<h3 class="text-lg font-medium text-gray-900 mb-4">Add Outgoing Relationship</h3>
+<h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Add Outgoing Relationship</h3>
 
 <form 
     hx-post="{% url 'cmdb:node_connect' label element_id %}"
@@ -11,9 +11,9 @@
 
     <div class="space-y-4">
         <div>
-            <label for="rel_type" class="block text-sm font-medium text-gray-700">Relationship Type</label>
+            <label for="rel_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Relationship Type</label>
             <select name="rel_type" id="rel_type" required
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                 <option value="">Select type</option>
                 {% for rel in allowed_rels %}
                     <option value="{{ rel }}">{{ rel }}</option>
