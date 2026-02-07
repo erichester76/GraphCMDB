@@ -402,14 +402,37 @@ def node_delete(request, label, element_id):
 
         # Return refreshed table body (same as nodes_list partial)
         nodes = node_class.nodes.all()[:50]
+        
+        # Get column configuration from type registry
+        metadata = TypeRegistry.get_metadata(label)
+        default_columns = metadata.get('columns', [])
+        
+        # Extract property values for each node based on columns
+        nodes_data = []
+        for node in nodes:
+            props = node.custom_properties or {}
+            node_data = {
+                'element_id': node.element_id,
+                'node': node,
+                'columns': {}
+            }
+            
+            # Extract values for each configured column
+            for col in default_columns:
+                node_data['columns'][col] = props.get(col, '')
+            
+            nodes_data.append(node_data)
+        
         return render(request, 'cmdb/partials/nodes_table.html', {
-            'nodes': nodes,
+            'nodes': nodes_data,
+            'columns': default_columns,
             'label': label,
         })
 
     except Exception as e:
         return render(request, 'cmdb/partials/nodes_table.html', {
             'nodes': [],
+            'columns': [],
             'label': label,
             'error': str(e)
         })
