@@ -135,9 +135,13 @@ def nodes_list(request, label):
         print(f"Error fetching {label}: {e}")
         nodes = []
     
-    # Add a computed .name attribute to each node for template use
+    # Collect all unique property keys across all nodes
+    all_property_keys = set()
     for node in nodes:
         props = node.custom_properties or {}
+        all_property_keys.update(props.keys())
+        
+        # Add a computed .name attribute to each node for template use
         if 'name' in props:
             node.display_name = props['name']
         elif props:
@@ -146,11 +150,21 @@ def nodes_list(request, label):
             node.display_name = str(props[first_key])
         else:
             node.display_name = f"Unnamed {label}"
+    
+    # Sort property keys for consistent display
+    sorted_property_keys = sorted(all_property_keys)
+    
+    # Prioritize 'name' if it exists
+    if 'name' in sorted_property_keys:
+        sorted_property_keys.remove('name')
+        sorted_property_keys.insert(0, 'name')
             
     context = {
         'label': label,
         'nodes': nodes,
         'all_labels': TypeRegistry.known_labels(),
+        'property_keys': sorted_property_keys,
+        'property_keys_json': json.dumps(sorted_property_keys),
     }
 
     # If request is from HTMX (partial refresh), return only the table

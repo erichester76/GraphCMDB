@@ -1,48 +1,196 @@
-<table class="min-w-full divide-y divide-gray-200">
-    <thead class="bg-gray-50">
-        <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Properties</th>
-            <th scope="col" class="relative px-6 py-3">
-                <span class="sr-only">Actions</span>
-            </th>
-        </tr>
-    </thead>
-    <tbody class="bg-white divide-y divide-gray-200">
-        {% for node in nodes %}
-        <tr>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                {{ node.element_id }}
-            </td>
-            <td class="px-6 py-4 text-sm text-gray-900">
-                {% if node.display_name %}
-                    {{ node.display_name }}
-                {% else %}
-                    <span class="text-gray-500 italic">No properties</span>
-                {% endif %}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <a href="{% url 'cmdb:node_detail' label node.element_id %}" class="text-indigo-600 hover:text-indigo-900 mr-3">Detail</a>
-                <button 
-                    hx-post="{% url 'cmdb:node_delete' label node.element_id %}"  
-                    hx-confirm="Delete this node? This action cannot be undone."
-                    hx-target="#nodes-content"
-                    hx-swap="innerHTML"
-                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                    class="text-red-600 hover:text-red-900">
-                    Delete
-                </button>
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="3" class="px-6 py-12 text-center text-gray-500">
-                No {{ label }} nodes found
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+{% load cmdb_filters %}
+
+<div x-data="{
+    searchTerm: '',
+    sortColumn: '',
+    sortDirection: 'asc',
+    visibleColumns: {{ property_keys_json|safe|default:'[]' }},
+    allColumns: {{ property_keys_json|safe|default:'[]' }},
+    
+    toggleColumn(col) {
+        const index = this.visibleColumns.indexOf(col);
+        if (index > -1) {
+            this.visibleColumns.splice(index, 1);
+        } else {
+            this.visibleColumns.push(col);
+        }
+    },
+    
+    isColumnVisible(col) {
+        return this.visibleColumns.includes(col);
+    },
+    
+    sortBy(column) {
+        if (this.sortColumn === column) {
+            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.sortColumn = column;
+            this.sortDirection = 'asc';
+        }
+    },
+    
+    getSortedFilteredRows() {
+        const rows = Array.from(document.querySelectorAll('#data-table tbody tr[data-row]'));
+        
+        // Filter rows
+        const filtered = rows.filter(row => {
+            if (!this.searchTerm) return true;
+            const text = row.textContent.toLowerCase();
+            return text.includes(this.searchTerm.toLowerCase());
+        });
+        
+        // Sort rows
+        if (this.sortColumn) {
+            filtered.sort((a, b) => {
+                const aVal = (a.querySelector(`[data-col='${this.sortColumn}']`)?.textContent || '').trim().toLowerCase();
+                const bVal = (b.querySelector(`[data-col='${this.sortColumn}']`)?.textContent || '').trim().toLowerCase();
+                
+                // Try numeric comparison first
+                const aNum = parseFloat(aVal);
+                const bNum = parseFloat(bVal);
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return this.sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+                }
+                
+                // String comparison
+                if (this.sortDirection === 'asc') {
+                    return aVal.localeCompare(bVal);
+                } else {
+                    return bVal.localeCompare(aVal);
+                }
+            });
+        }
+        
+        return filtered;
+    }
+}" class="space-y-4">
+    <!-- Search and Column Controls -->
+    <div class="flex gap-4 items-center bg-white p-4 rounded-lg shadow-sm">
+        <div class="flex-1">
+            <input 
+                type="text" 
+                x-model="searchTerm"
+                placeholder="Search across all columns..."
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+            />
+        </div>
+        
+        <div class="relative" x-data="{ open: false }">
+            <button 
+                @click="open = !open"
+                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                Columns
+            </button>
+            
+            <div 
+                x-show="open" 
+                @click.away="open = false"
+                x-transition
+                class="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
+            >
+                <div class="py-1 max-h-96 overflow-y-auto">
+                    <template x-for="col in allColumns" :key="col">
+                        <label class="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                :checked="isColumnVisible(col)"
+                                @change="toggleColumn(col)"
+                                class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2"
+                            />
+                            <span class="text-sm text-gray-700" x-text="col"></span>
+                        </label>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+        <table id="data-table" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <button @click="sortBy('id')" class="flex items-center hover:text-gray-700">
+                            ID
+                            <span x-show="sortColumn === 'id'" class="ml-1">
+                                <span x-show="sortDirection === 'asc'">↑</span>
+                                <span x-show="sortDirection === 'desc'">↓</span>
+                            </span>
+                        </button>
+                    </th>
+                    {% for key in property_keys %}
+                    <th 
+                        scope="col" 
+                        x-show="isColumnVisible('{{ key }}')"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                        <button @click="sortBy('{{ key }}')" class="flex items-center hover:text-gray-700">
+                            {{ key }}
+                            <span x-show="sortColumn === '{{ key }}'" class="ml-1">
+                                <span x-show="sortDirection === 'asc'">↑</span>
+                                <span x-show="sortDirection === 'desc'">↓</span>
+                            </span>
+                        </button>
+                    </th>
+                    {% endfor %}
+                    <th scope="col" class="relative px-6 py-3">
+                        <span class="sr-only">Actions</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for node in nodes %}
+                <tr 
+                    data-row
+                    x-show="getSortedFilteredRows().includes($el)"
+                    :style="{ order: getSortedFilteredRows().indexOf($el) }"
+                    style="display: table-row;"
+                >
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" data-col="id">
+                        {{ node.element_id|slice:":12" }}...
+                    </td>
+                    {% for key in property_keys %}
+                    <td 
+                        x-show="isColumnVisible('{{ key }}')"
+                        class="px-6 py-4 text-sm text-gray-900" 
+                        data-col="{{ key }}"
+                    >
+                        {% if node.custom_properties %}
+                            {{ node.custom_properties|get_item:key|default:"-" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="{% url 'cmdb:node_detail' label node.element_id %}" class="text-indigo-600 hover:text-indigo-900 mr-3">Detail</a>
+                        <button 
+                            hx-post="{% url 'cmdb:node_delete' label node.element_id %}"  
+                            hx-confirm="Delete this node? This action cannot be undone."
+                            hx-target="#nodes-content"
+                            hx-swap="innerHTML"
+                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            class="text-red-600 hover:text-red-900">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td :colspan="2 + visibleColumns.length" class="px-6 py-12 text-center text-gray-500">
+                        No {{ label }} nodes found
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 
 <!-- Edit Modal (placeholder - filled by HTMX) -->
 <dialog id="edit-modal" class="p-6 bg-white rounded-lg shadow-xl max-w-lg w-full">
