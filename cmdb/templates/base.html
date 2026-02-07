@@ -220,13 +220,20 @@
     <script>
         // Simple onclick handler to update sidebar highlight
         function updateSidebarHighlight(clickedLink) {
-            // Remove active classes from all sidebar links
+            // First, reset ALL sidebar links to inactive state
             document.querySelectorAll('aside a[href*="/nodes/"]').forEach(link => {
-                link.classList.remove('bg-indigo-50', 'text-indigo-700', 'dark:bg-indigo-600', 'dark:text-white');
+                // Remove ALL possible classes (both active and inactive states)
+                link.classList.remove(
+                    'bg-indigo-50', 'text-indigo-700',           // Light mode active
+                    'dark:bg-indigo-600', 'dark:text-white',     // Dark mode active
+                    'text-gray-700', 'hover:bg-gray-50',         // Light mode inactive
+                    'dark:text-gray-300', 'dark:hover:bg-gray-700' // Dark mode inactive
+                );
+                // Add inactive state classes to all
                 link.classList.add('text-gray-700', 'hover:bg-gray-50', 'dark:text-gray-300', 'dark:hover:bg-gray-700');
             });
             
-            // Add active classes to clicked link
+            // Then set the clicked link to active state
             clickedLink.classList.remove('text-gray-700', 'hover:bg-gray-50', 'dark:text-gray-300', 'dark:hover:bg-gray-700');
             clickedLink.classList.add('bg-indigo-50', 'text-indigo-700', 'dark:bg-indigo-600', 'dark:text-white');
         }
