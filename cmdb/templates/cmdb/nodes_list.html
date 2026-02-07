@@ -27,7 +27,11 @@
 {% endblock %}
 
 {% block content %}
-<div id="nodes-content" class="bg-white shadow rounded-lg overflow-hidden">
+<div id="nodes-content" 
+     class="bg-white shadow rounded-lg overflow-hidden"
+     hx-get="{% url 'cmdb:nodes_list' label %}"
+     hx-trigger="refresh from:body"
+     hx-swap="innerHTML">
     {% include "cmdb/partials/nodes_table.html" %}
 </div>
 
