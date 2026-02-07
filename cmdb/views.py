@@ -104,14 +104,11 @@ def dashboard(request):
     counts = {}
     for label in labels:
         try:
-            # Raw Cypher count - always accurate, no neomodel quirks
-            result, _ = db.cypher_query(f"""
-                MATCH (n:`{label}`)
-                RETURN count(n) AS cnt
-            """)
-            count = result[0][0] if result else 0
+            # Use Neomodel's count method instead of raw Cypher
+            node_class = DynamicNode.get_or_create_label(label)
+            count = node_class.nodes.count()
             counts[label] = count
-            print(f"Dashboard Cypher count for {label}: {count}")
+            print(f"Dashboard Neomodel count for {label}: {count}")
         except Exception as e:
             print(f"Error counting {label}: {e}")
             counts[label] = 0
@@ -194,17 +191,10 @@ def node_add_relationship_form(request, label, element_id):
 def node_detail(request, label, element_id):
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        query = f"""
-            MATCH (n:`{label}`)
-            WHERE elementId(n) = $eid
-            RETURN n
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
+        # Use helper method instead of raw Cypher
+        node = node_class.get_by_element_id(element_id)
+        if not node:
             raise node_class.DoesNotExist
-
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
 
         props_list = []
         for key, value in (node.custom_properties or {}).items():
@@ -215,90 +205,9 @@ def node_detail(request, label, element_id):
                 'is_relationship': False,
             })
 
-        out_rels_query = f"""
-            MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (n)-[r]->(m)
-            WITH 
-                type(r) AS rel_type,
-                elementId(m) AS target_id,
-                labels(m)[0] AS target_label,
-                apoc.convert.fromJsonMap(m.custom_properties) AS props_map
-            RETURN 
-                rel_type,
-                target_id,
-                target_label,
-                COALESCE(
-                    props_map.name,
-                    props_map[head(keys(props_map))]
-                ) AS target_name
-        """
-
-        out_rels_result, _ = db.cypher_query(out_rels_query, {'eid': element_id})
-
-        out_rels = {}
-        for row in out_rels_result:
-            rel_type = row[0]
-            if rel_type not in out_rels:
-                out_rels[rel_type] = []
-            out_rels[rel_type].append({
-                'target_id': row[1],
-                'target_label': row[2],
-                'target_name': row[3] or row[1][:50] + '...',
-            })
-        
-        # Add relationships as property-like entries
-        for rel_type, targets in out_rels.items():
-            if not targets:  # Skip if no targets
-                continue
-                
-            # Get the target label from the type registry relationship definition
-            type_meta = TypeRegistry.get_metadata(label)
-            relationships = type_meta.get('relationships', {})
-            rel_def = relationships.get(rel_type, {})
-            
-            # Create a property-like entry for each relationship
-            for target in targets:
-                target_label = rel_def.get('target', target['target_label'])
-                props_list.append({
-                    'key': target_label,
-                    'value': target['target_name'],
-                    'value_type': 'relationship',
-                    'is_relationship': True,
-                    'target_id': target['target_id'],
-                    'target_label': target['target_label'],
-                    'rel_type': rel_type,
-                })
-            
-        # Fetch incoming relationships with Cypher
-        in_rels_query = f"""
-            MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (m)-[r]->(n)
-            WITH 
-                type(r) AS rel_type,
-                elementId(m) AS source_id,
-                labels(m)[0] AS source_label,
-                apoc.convert.fromJsonMap(m.custom_properties) AS props_map
-            RETURN 
-                rel_type,
-                source_id,
-                source_label,
-                COALESCE(
-                    props_map.name,
-                    props_map[head(keys(props_map))]
-                ) AS source_name
-        """
-        in_rels_result, _ = db.cypher_query(in_rels_query, {'eid': element_id})
-
-        in_rels = {}
-        for row in in_rels_result:
-            rel_type = row[0]
-            if rel_type not in in_rels:
-                in_rels[rel_type] = []
-            in_rels[rel_type].append({
-                'source_id': row[1],
-                'source_label': row[2],
-                'source_name': row[3] or row[1][:50] + '...',
-            })
+        # Use helper methods for relationship queries
+        out_rels = node.get_outgoing_relationships()
+        in_rels = node.get_incoming_relationships()
 
         feature_pack_tabs = []
         for tab in getattr(settings, 'FEATURE_PACK_TABS', []):
@@ -354,17 +263,10 @@ def node_edit(request, label, element_id):
     
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        query = f"""
-            MATCH (n:`{label}`)
-            WHERE elementId(n) = $eid
-            RETURN n
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
+        # Use helper method instead of raw Cypher
+        node = node_class.get_by_element_id(element_id)
+        if not node:
             raise node_class.DoesNotExist
-
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
 
     except node_class.DoesNotExist:
         return JsonResponse({'error': 'Node not found'}, status=404)
@@ -463,18 +365,11 @@ def node_edit(request, label, element_id):
 def node_delete(request, label, element_id):
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        # Cypher lookup
-        query = f"""
-            MATCH (n:`{label}`)
-            WHERE elementId(n) = $eid
-            RETURN n
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
+        # Use helper method instead of raw Cypher
+        node = node_class.get_by_element_id(element_id)
+        if not node:
             return JsonResponse({'error': 'Node not found'}, status=404)
 
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
         node.delete()
 
         # Return refreshed table body (same as nodes_list partial)
@@ -612,61 +507,26 @@ def node_connect(request, label, element_id):
         if not rel_type or not target_label or not target_id:
             raise ValueError("Missing relationship details")
 
-        connect_query = f"""
-            MATCH (source:`{label}`) WHERE elementId(source) = $sid
-            MATCH (target:`{target_label}`) WHERE elementId(target) = $tid
-            MERGE (source)-[:`{rel_type}`]->(target)
-            RETURN elementId(source) AS source_id
-        """
-        result, _ = db.cypher_query(connect_query, {'sid': element_id, 'tid': target_id})
-        if not result:
+        # Use helper method to create relationship
+        node_class = DynamicNode.get_or_create_label(label)
+        success = node_class.connect_nodes(element_id, label, rel_type, target_id, target_label)
+        if not success:
             raise ValueError("Failed to create relationship")
 
-        out_rels_query = f"""
-            MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (n)-[r]->(m)
-            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
-                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
-        """
-        out_rels_result, _ = db.cypher_query(out_rels_query, {'eid': element_id})
-
-        out_rels = {}
-        for row in out_rels_result:
-            rel_type = row[0]
-            if rel_type not in out_rels:
-                out_rels[rel_type] = []
-            out_rels[rel_type].append({
-                'target_id': row[1],
-                'target_label': row[2],
-                'target_name': row[3] or row[1][:12] + '...',
-            })
+        # Get updated node and its relationships
+        node = node_class.get_by_element_id(element_id)
+        if not node:
+            raise ValueError("Source node not found")
             
-        # Fetch incoming relationships with Cypher
-        in_rels_query = f"""
-            MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (m)-[r]->(n)
-            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
-                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
-        """
-        in_rels_result, _ = db.cypher_query(in_rels_query, {'eid': element_id})
-
-        in_rels = {}
-        for row in in_rels_result:
-            rel_type = row[0]
-            if rel_type not in in_rels:
-                in_rels[rel_type] = []
-            in_rels[rel_type].append({
-                'source_id': row[1],
-                'source_label': row[2],
-                'source_name': row[3] or row[1][:12] + '...',
-            })
+        out_rels = node.get_outgoing_relationships()
+        in_rels = node.get_incoming_relationships()
 
         return render(request, 'cmdb/partials/node_relationships.html', {
             'inbound_relationships': in_rels,
             'outbound_relationships': out_rels,
             'element_id': element_id,
             'label': label,
-            'success_message': f"Relationship '{rel_type}' removed"
+            'success_message': f"Relationship '{rel_type}' created"
         })
     except Exception as e:
         rels = {}
@@ -687,56 +547,19 @@ def node_disconnect(request, label, element_id):
         if not rel_type or not target_id or not target_label:
             raise ValueError("Missing disconnect details")
 
-        disconnect_query = f"""
-            MATCH (source:`{label}`)-[r:`{rel_type}`]->(target:`{target_label}`)
-            WHERE elementId(source) = $sid AND elementId(target) = $tid
-            DELETE r
-            RETURN count(r) AS deleted
-        """
-        result, _ = db.cypher_query(disconnect_query, {'sid': element_id, 'tid': target_id})
-
-        deleted = result[0][0] if result else 0
+        # Use helper method to delete relationship
+        node_class = DynamicNode.get_or_create_label(label)
+        deleted = node_class.disconnect_nodes(element_id, label, rel_type, target_id, target_label)
         if deleted == 0:
             raise ValueError("Relationship not found")
 
-        out_rels_query = f"""
-            MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (n)-[r]->(m)
-            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
-                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
-        """
-        out_rels_result, _ = db.cypher_query(out_rels_query, {'eid': element_id})
-
-        out_rels = {}
-        for row in out_rels_result:
-            rel_type = row[0]
-            if rel_type not in out_rels:
-                out_rels[rel_type] = []
-            out_rels[rel_type].append({
-                'target_id': row[1],
-                'target_label': row[2],
-                'target_name': row[3] or row[1][:12] + '...',
-            })
+        # Get updated node and its relationships
+        node = node_class.get_by_element_id(element_id)
+        if not node:
+            raise ValueError("Source node not found")
             
-        # Fetch incoming relationships with Cypher
-        in_rels_query = f"""
-            MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (m)-[r]->(n)
-            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
-                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
-        """
-        in_rels_result, _ = db.cypher_query(in_rels_query, {'eid': element_id})
-
-        in_rels = {}
-        for row in in_rels_result:
-            rel_type = row[0]
-            if rel_type not in in_rels:
-                in_rels[rel_type] = []
-            in_rels[rel_type].append({
-                'source_id': row[1],
-                'source_label': row[2],
-                'source_name': row[3] or row[1][:12] + '...',
-            })
+        out_rels = node.get_outgoing_relationships()
+        in_rels = node.get_incoming_relationships()
 
         return render(request, 'cmdb/partials/node_relationships.html', {
             'inbound_relationships': in_rels,
@@ -765,7 +588,7 @@ def get_target_nodes(request):
         node_class = DynamicNode.get_or_create_label(target_label)
         nodes = node_class.nodes.all()[:50]
 
-        sorted_nodes = sorted(nodes, key=lambda n: n.custom_properties.get('name', n.element_id))
+        sorted_nodes = sorted(nodes, key=lambda n: n.get_property('name', n.element_id))
 
         # Load the partial template manually as string
         template = Template(open('cmdb/templates/cmdb/partials/target_node_options.html').read())
