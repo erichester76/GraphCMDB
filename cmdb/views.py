@@ -408,8 +408,9 @@ def node_delete(request, label, element_id):
         # Get column configuration from type registry
         metadata = TypeRegistry.get_metadata(label)
         default_columns = metadata.get('columns', [])
+        all_properties = metadata.get('properties', [])
         
-        # Extract property values for each node based on columns
+        # Extract property values for each node - FOR ALL PROPERTIES
         nodes_data = []
         for node in nodes:
             props = node.custom_properties or {}
@@ -419,15 +420,16 @@ def node_delete(request, label, element_id):
                 'columns': {}
             }
             
-            # Extract values for each configured column
-            for col in default_columns:
-                node_data['columns'][col] = props.get(col, '')
+            # Extract values for ALL properties (so DOM elements exist for column toggle)
+            for prop in all_properties:
+                node_data['columns'][prop] = props.get(prop, '')
             
             nodes_data.append(node_data)
         
         return render(request, 'cmdb/partials/nodes_table.html', {
             'nodes': nodes_data,
             'columns': default_columns,
+            'all_properties': all_properties,
             'label': label,
         })
 
@@ -435,6 +437,7 @@ def node_delete(request, label, element_id):
         return render(request, 'cmdb/partials/nodes_table.html', {
             'nodes': [],
             'columns': [],
+            'all_properties': [],
             'label': label,
             'error': str(e)
         })

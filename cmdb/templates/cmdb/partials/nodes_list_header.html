@@ -4,7 +4,7 @@
 <div id="header-actions" hx-swap-oob="true">
     <div class="flex items-center gap-4" 
          x-data="listViewManager('{{ label }}', {{ columns_json }}, {{ all_properties_json }})"
-         @htmx:after-swap.window="$el.closest('[x-data]').__x && $el.closest('[x-data]').__x.$data.initFromStorage()">
+         x-init="init()">
         
         <!-- Column Selector -->
         <div class="relative" @click.away="dropdownOpen = false">
@@ -79,7 +79,7 @@ function listViewManager(label, defaultColumns, allProperties) {
     return {
         label: label,
         availableColumns: allProperties,
-        visibleColumns: defaultColumns,
+        visibleColumns: defaultColumns.slice(), // Clone array to avoid mutation
         filterText: '',
         dropdownOpen: false,
         

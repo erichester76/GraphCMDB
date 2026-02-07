@@ -3,11 +3,12 @@
     <thead class="bg-gray-50 dark:bg-gray-700">
         <tr>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
-            {% for column in columns %}
+            {% for property in all_properties %}
             <th scope="col" 
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider column-{{ column }}"
-                data-column="{{ column }}">
-                {{ column|title }}
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider column-{{ property }}"
+                data-column="{{ property }}"
+                style="{% if property not in columns %}display: none;{% endif %}">
+                {{ property|title }}
             </th>
             {% endfor %}
             <th scope="col" class="relative px-6 py-3">
@@ -21,10 +22,12 @@
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                 {{ node.element_id|truncatechars:12 }}
             </td>
-            {% for column in columns %}
-            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 column-{{ column }}" data-column="{{ column }}">
-                {% if node.columns|get_item:column %}
-                    {{ node.columns|get_item:column }}
+            {% for property in all_properties %}
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 column-{{ property }}" 
+                data-column="{{ property }}"
+                style="{% if property not in columns %}display: none;{% endif %}">
+                {% if node.columns|get_item:property %}
+                    {{ node.columns|get_item:property }}
                 {% else %}
                     <span class="text-gray-400 dark:text-gray-500 italic">-</span>
                 {% endif %}
@@ -45,7 +48,7 @@
         </tr>
         {% empty %}
         <tr>
-            <td colspan="{{ columns|length|add:2 }}" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+            <td colspan="{{ all_properties|length|add:2 }}" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                 No {{ label }} nodes found
             </td>
         </tr>
