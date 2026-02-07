@@ -1,7 +1,7 @@
-<h3 class="text-lg font-medium text-gray-900">Create new {{ label }}</h3>
+<h3 class="text-lg font-medium text-gray-900 dark:text-white">Create new {{ label }}</h3>
 
 {% if error %}
-    <div class="mt-4 p-3 bg-red-100 text-red-800 rounded">
+    <div class="mt-4 p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
         {{ error }}
     </div>
 {% endif %}
@@ -19,7 +19,7 @@
         <div class="space-y-4 mb-6">
             {% for field in form_fields %}
                 <div>
-                    <label for="{{ field.input_name }}" class="block text-sm font-medium text-gray-700">
+                    <label for="{{ field.input_name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         {{ field.key }}
                         {% if field.required %}
                             <span class="text-red-600">*</span>
@@ -30,30 +30,30 @@
                         name="{{ field.input_name }}"
                         value="{{ field.value }}"
                         {% if field.required %}required{% endif %}
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                 </div>
             {% endfor %}
         </div>
     {% else %}
-        <p class="text-gray-500 italic">No properties defined for this type.</p>
+        <p class="text-gray-500 dark:text-gray-400 italic">No properties defined for this type.</p>
     {% endif %}
 
     <!-- Raw JSON fallback/override -->
     <div class="mt-6">
-        <label for="properties" class="block text-sm font-medium text-gray-700">Raw JSON (merges with fields above)</label>
+        <label for="properties" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Raw JSON (merges with fields above)</label>
         <textarea 
             id="properties" 
             name="properties" 
             rows="4"
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm font-mono"
+            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm font-mono"
             placeholder='{"extra_key": "value"}'></textarea>
     </div>
 
     <div class="mt-6 flex justify-end gap-3">
-        <button type="button" onclick="document.getElementById('create-modal').close()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50">
+        <button type="button" onclick="document.getElementById('create-modal').close()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
             Cancel
         </button>
-        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+        <button type="submit" class="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800">
             Create {{ label }}
         </button>
     </div>

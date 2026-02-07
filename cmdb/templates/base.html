@@ -1,7 +1,8 @@
 {% load static %}
+{% load cmdb_extras %}
 
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-50">
+<html lang="en" class="h-full bg-gray-50" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" :class="{ 'dark': darkMode }">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,23 +20,39 @@
     {% block extra_head %}{% endblock %}
 
 </head>
-<body class="h-full antialiased">
-    <div class="flex h-screen overflow-hidden bg-gray-100">
+<body class="h-full antialiased" :class="darkMode ? 'dark' : ''">
+    <div class="flex h-screen overflow-hidden" :class="darkMode ? 'bg-gray-900' : 'bg-gray-100'" x-data="{ sidebarOpen: localStorage.getItem('sidebarOpen') !== 'false' }">
         <!-- Sidebar (state persists) -->
-        <aside class="w-64 flex-shrink-0 border-r border-gray-200 bg-white">
-            <div class="p-6">
-                <h1 class="text-2xl font-bold text-gray-900">Graph CMDB</h1>
-                <p class="mt-1 text-sm text-gray-500">Dynamic Inventory</p>
+        <aside x-show="sidebarOpen" 
+               x-transition:enter="transition ease-out duration-200"
+               x-transition:enter-start="-translate-x-full"
+               x-transition:enter-end="translate-x-0"
+               x-transition:leave="transition ease-in duration-200"
+               x-transition:leave-start="translate-x-0"
+               x-transition:leave-end="-translate-x-full"
+               aria-label="Navigation sidebar"
+               :aria-hidden="!sidebarOpen"
+               class="w-64 flex-shrink-0 border-r flex flex-col overflow-hidden"
+               :class="darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
+            <div class="p-6 flex items-center justify-between flex-shrink-0">
+                <div>
+                    <h1 class="text-2xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">Graph CMDB</h1>
+                    <p class="mt-1 text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">Dynamic Inventory</p>
+                </div>
             </div>
 
-            <nav class="mt-6 px-3 space-y-1">
+            <nav class="flex-1 overflow-y-auto mt-6 px-3 space-y-1 pb-6">
                 <a href="{% url 'cmdb:dashboard' %}"
                    hx-get="{% url 'cmdb:dashboard' %}"
                    hx-target="#main-content"
                    hx-swap="innerHTML"
                    hx-push-url="true"
                    hx-indicator="#main-content .htmx-indicator"
-                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'dashboard' %}bg-indigo-50 text-indigo-700{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md"
+                   :class="darkMode ? ('{% if request.resolver_match.url_name == "dashboard" %}bg-indigo-600 text-white{% else %}text-gray-300 hover:bg-gray-700{% endif %}') : ('{% if request.resolver_match.url_name == "dashboard" %}bg-indigo-50 text-indigo-700{% else %}text-gray-700 hover:bg-gray-50{% endif %}')">
+                    <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
                     Dashboard
                 </a>
 
@@ -44,7 +61,11 @@
                     {% for category, labels in categories.items %}
                         <div class="space-y-1">
                             <button @click="openCategories['{{ category }}'] = !openCategories['{{ category }}']"
-                                    class="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md">
+                                    class="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md"
+                                    :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'">
+                                <svg class="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
                                 {{ category }}
                                 <svg x-show="openCategories['{{ category }}']" class="ml-auto h-5 w-5 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -56,15 +77,45 @@
 
                             <div x-show="openCategories['{{ category }}']" x-transition class="space-y-1 pl-4">
                                 {% for label in labels %}
-                                    <a href="{% url 'cmdb:nodes_list' label %}"
-                                       hx-get="{% url 'cmdb:nodes_list' label %}"
-                                       hx-target="#main-content"
-                                       hx-swap="innerHTML"
-                                       hx-push-url="true"
-                                       hx-indicator="#main-content .htmx-indicator"
-                                       class="flex items-center px-3 py-2 text-sm font-medium rounded-md {% if request.resolver_match.kwargs.label == label %}bg-indigo-50 text-indigo-700{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                                    <div class="group relative">
+                                        <a href="{% url 'cmdb:nodes_list' label %}"
+                                           hx-get="{% url 'cmdb:nodes_list' label %}"
+                                           hx-target="#main-content"
+                                           hx-swap="innerHTML"
+                                           hx-push-url="true"
+                                           hx-indicator="#main-content .htmx-indicator"
+                                           class="flex items-center px-3 py-2 text-sm font-medium rounded-md group-hover:pr-20"
+                                           :class="darkMode ? ('{% if request.resolver_match.kwargs.label == label %}bg-indigo-600 text-white{% else %}text-gray-300 hover:bg-gray-700{% endif %}') : ('{% if request.resolver_match.kwargs.label == label %}bg-indigo-50 text-indigo-700{% else %}text-gray-700 hover:bg-gray-50{% endif %}')">
+                                            {% if categories_metadata|get_item:label and categories_metadata|get_item:label.icon %}
+                                                <span class="mr-2">{{ categories_metadata|get_item:label.icon }}</span>
+                                            {% else %}
+                                                <svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                                </svg>
+                                            {% endif %}
                                             {{ label|cut:"_" }}
                                         </a>
+                                        <div class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                            <button 
+                                                hx-get="{% url 'cmdb:node_create' label %}" 
+                                                hx-target="#create-modal-content"
+                                                hx-swap="innerHTML"
+                                                onclick="document.getElementById('create-modal')?.showModal()"
+                                                class="p-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-800"
+                                                title="Create {{ label }}">
+                                                <svg class="h-4 w-4 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                                </svg>
+                                            </button>
+                                            <button 
+                                                class="p-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-800"
+                                                title="Import {{ label }}">
+                                                <svg class="h-4 w-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
                                 {% endfor %}
                             </div>
                         </div>
@@ -78,8 +129,12 @@
                    hx-swap="innerHTML"
                    hx-push-url="true"
                    hx-indicator="#main-content .htmx-indicator"
-                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 mt-4">
-                    + Register New Type
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md mt-4"
+                   :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'">
+                    <svg class="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Register New Type
                 </a>
             </nav>
         </aside>
@@ -87,34 +142,61 @@
         <!-- Main content area -->
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Top bar -->
-            <header class="bg-white shadow-sm">
+            <header class="shadow-sm" :class="darkMode ? 'bg-gray-800' : 'bg-white'">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="py-4 flex justify-between items-center">
-                        <h1 id="page-title" class="text-xl font-semibold text-gray-900">
+                    <div class="py-4 flex items-center gap-4">
+                        <!-- Far left: Hamburger menu -->
+                        <button @click="sidebarOpen = !sidebarOpen; localStorage.setItem('sidebarOpen', sidebarOpen)"
+                                aria-label="Toggle sidebar"
+                                class="p-2 rounded-md"
+                                :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                        
+                        <!-- Center-left: Page title -->
+                        <h1 class="text-xl font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
                             {% block page_title %}{% endblock %}
                         </h1>
-                        <div id="header-actions">
+                        
+                        <!-- Spacer to push right items to the right -->
+                        <div class="flex-1"></div>
+                        
+                        <!-- Center-right: Header actions -->
+                        <div class="flex items-center gap-4">
                             {% block header_actions %}{% endblock %}
                         </div>
+                        
+                        <!-- Far right: Dark mode toggle -->
+                        <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)"
+                                aria-label="Toggle dark mode"
+                                class="p-2 rounded-md"
+                                :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'"
+                                title="Toggle dark mode">
+                            <svg x-show="!darkMode" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                            <svg x-show="darkMode" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </header>
 
             <!-- Page content -->
-            <main class="flex-1 overflow-y-auto bg-gray-50">
-                <div id="main-content" 
-                     class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 relative"
-                     hx-trigger="refresh from:body"
-                     hx-get="{{ request.path }}"
-                     hx-swap="innerHTML">
+            <main class="flex-1 overflow-y-auto" :class="darkMode ? 'bg-gray-900' : 'bg-gray-50'">
+                <div id="main-content" class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 relative">
                     <!-- Loading indicator (shows during HTMX requests) -->
-                    <div class="htmx-indicator absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-75 z-10 hidden">
+                    <div class="htmx-indicator absolute inset-0 flex items-center justify-center bg-opacity-75 z-10 hidden"
+                         :class="darkMode ? 'bg-gray-900' : 'bg-gray-50'">
                         <div class="text-center">
                             <svg class="animate-spin h-12 w-12 text-indigo-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            <p class="mt-4 text-gray-600">Loading...</p>
+                            <p class="mt-4" :class="darkMode ? 'text-gray-300' : 'text-gray-600'">Loading...</p>
                         </div>
                     </div>
 
@@ -124,6 +206,15 @@
             </main>
         </div>
     </div>
+
+    <!-- Create Modal (Global) -->
+    <dialog id="create-modal" 
+            role="dialog"
+            aria-label="Create new item"
+            class="p-6 rounded-lg shadow-xl max-w-lg w-full backdrop:bg-black backdrop:bg-opacity-50"
+            :class="darkMode ? 'bg-gray-800 text-white' : 'bg-white'">
+        <div id="create-modal-content"></div>
+    </dialog>
 
     {% block extra_js %}{% endblock %}
 </body>

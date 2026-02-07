@@ -5,6 +5,7 @@ module.exports = {
     "./cmdb/templates/**/*.html",
     "./core/templates/**/*.html",
   ],
+  darkMode: 'class',
   theme: {
     extend: {},
   },
