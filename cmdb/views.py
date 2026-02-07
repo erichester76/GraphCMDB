@@ -243,6 +243,7 @@ def node_detail(request, label, element_id):
             'all_labels': TypeRegistry.known_labels(),
             'feature_pack_tabs': feature_pack_tabs,
             'initial_active_tab': initial_active_tab,
+            'csrf_token': get_token(request),
         }
         
         # If HTMX request, include header partial for out-of-band swap

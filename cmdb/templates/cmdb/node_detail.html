@@ -2,40 +2,38 @@
 
 {% block title %}{{ label }} Detail - {{ element_id|truncatechars:12 }}...{% endblock %}
 
-{% block page_title %}{{ label }}: {{ element_id|truncatechars:12 }}...{% endblock %}
+{% block page_title %}{{ label }} :: 
+{% for prop in properties_list %}
+{% if prop.key == 'name' %}
+    {{ prop.value }}
+{% endif %}
+{% endfor %}
+{% endblock %}
+
+{% block header_actions %}
+    <div class="flex gap-4">
+        <button 
+            hx-get="{% url 'cmdb:node_edit' label element_id %}" 
+            hx-target="#edit-modal-content"
+            hx-swap="innerHTML"
+            onclick="document.getElementById('edit-modal').showModal()"
+            class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
+            Edit
+        </button>
+        <button 
+            hx-post="{% url 'cmdb:node_delete' label element_id %}"  
+            hx-confirm="Delete this node? This action cannot be undone."
+            hx-target="#main-content"
+            hx-swap="innerHTML"
+            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+            class="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">
+            Delete
+        </button>
+    </div>
+{% endblock %}
 
 {% block content %}
 <div class="bg-white shadow rounded-lg p-6">
-    <!-- Node Header with Actions -->
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">{{ label }} :: 
-        {% for prop in properties_list %}
-        {% if prop.key == 'name' %}
-            {{ prop.value }}
-        {% endif %}
-        {% endfor %}
-        </h1>
-        <div class="flex gap-4">
-                <button 
-                    hx-get="{% url 'cmdb:node_edit' label node.element_id %}" 
-                    hx-target="#edit-modal-content"
-                    hx-swap="innerHTML"
-                    onclick="document.getElementById('edit-modal').showModal()"
-                    class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
-                    Edit
-                </button>
-                <button 
-                    hx-post="{% url 'cmdb:node_delete' label node.element_id %}"  
-                    hx-confirm="Delete this node? This action cannot be undone."
-                    hx-target="#main-content"
-                    hx-swap="innerHTML"
-                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                    class="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">
-                    Delete
-                </button>
-        </div>
-    </div>
-
     <!-- Error Message -->
     {% if error %}
         <div class="p-4 bg-red-100 text-red-800 rounded mb-6">
