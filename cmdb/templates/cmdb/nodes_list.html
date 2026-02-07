@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ label }} - Graph CMDB{% endblock %}
 
@@ -90,4 +91,8 @@ document.body.addEventListener('nodeDeleted', function() {
     </div>
 </dialog>
 
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/list_view.js' %}"></script>
 {% endblock %}

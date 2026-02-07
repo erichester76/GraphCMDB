@@ -11,6 +11,11 @@
       "name",
       "cidr"
     ],
+    "columns": [
+      "name",
+      "cidr",
+      "description"
+    ],
     "relationships": {
       "CHILD_OF": {
         "target": "Network",
@@ -33,6 +38,11 @@
     "required": [
       "address"
     ],
+    "columns": [
+      "address",
+      "type",
+      "status"
+    ],
     "relationships": {
       "PART_OF": {
         "target": "Network",
@@ -53,6 +63,10 @@
     ],
     "required": [
       "address"
+    ],
+    "columns": [
+      "address",
+      "status"
     ],
     "relationships": {
       "ASSIGNED_TO": {

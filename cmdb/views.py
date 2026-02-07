@@ -139,21 +139,41 @@ def nodes_list(request, label):
         print(f"Error fetching {label}: {e}")
         nodes = []
     
-    # Add a computed .name attribute to each node for template use
+    # Get column configuration from type registry
+    metadata = TypeRegistry.get_metadata(label)
+    default_columns = metadata.get('columns', [])
+    all_properties = metadata.get('properties', [])
+    
+    # Extract property values for each node based on columns
+    nodes_data = []
     for node in nodes:
         props = node.custom_properties or {}
+        node_data = {
+            'element_id': node.element_id,
+            'node': node,
+            'columns': {}
+        }
+        
+        # Extract values for each configured column
+        for col in default_columns:
+            node_data['columns'][col] = props.get(col, '')
+        
+        # Also compute display_name for backwards compatibility
         if 'name' in props:
-            node.display_name = props['name']
+            node_data['display_name'] = props['name']
         elif props:
-            # Get first property value (sorted by key)
             first_key = sorted(props.keys())[0]
-            node.display_name = str(props[first_key])
+            node_data['display_name'] = str(props[first_key])
         else:
-            node.display_name = f"Unnamed {label}"
+            node_data['display_name'] = f"Unnamed {label}"
+            
+        nodes_data.append(node_data)
             
     context = {
         'label': label,
-        'nodes': nodes,
+        'nodes': nodes_data,
+        'columns': default_columns,
+        'all_properties': all_properties,
         'all_labels': TypeRegistry.known_labels(),
     }
 
