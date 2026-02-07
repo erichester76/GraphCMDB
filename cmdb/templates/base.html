@@ -156,7 +156,7 @@
                         </button>
                         
                         <!-- Center-left: Page title -->
-                        <h1 class="text-xl font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                        <h1 id="page-title" class="text-xl font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
                             {% block page_title %}{% endblock %}
                         </h1>
                         
@@ -164,7 +164,7 @@
                         <div class="flex-1"></div>
                         
                         <!-- Center-right: Header actions -->
-                        <div class="flex items-center gap-4">
+                        <div id="header-actions" class="flex items-center gap-4">
                             {% block header_actions %}{% endblock %}
                         </div>
                         
