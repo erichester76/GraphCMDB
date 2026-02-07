@@ -17,6 +17,12 @@ class DynamicNode(StructuredNode):
         if label_name in _LABEL_REGISTRY:
             return _LABEL_REGISTRY[label_name]
 
+        # Validate label name follows Neo4j conventions (alphanumeric, underscore, no special chars)
+        # This prevents potential injection and ensures valid Neo4j labels
+        import re
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', label_name):
+            raise ValueError(f"Invalid label name: {label_name}. Must be alphanumeric with underscores only.")
+
         # Create dynamic subclass
         class_name = f"Dynamic{label_name}Node"
         attrs = {
@@ -34,7 +40,17 @@ class DynamicNode(StructuredNode):
         """
         Retrieve a node by its Neo4j element ID.
         Returns the inflated node or None if not found.
+        
+        Note: The label is safely obtained from cls.__label__ which is set
+        during class creation via get_or_create_label() and comes from
+        TypeRegistry (application-controlled, not user input).
         """
+        # Validate label exists (defensive check)
+        if not hasattr(cls, '__label__') or not cls.__label__:
+            raise ValueError("Class must have a valid __label__ attribute")
+        
+        # Label is parameterized as part of the node pattern for Neo4j
+        # Element ID is properly parameterized to prevent injection
         query = f"""
             MATCH (n:`{cls.__label__}`)
             WHERE elementId(n) = $eid

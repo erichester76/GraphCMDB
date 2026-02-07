@@ -167,8 +167,8 @@ def room_racks_tab(request, label, element_id):
 
         context['node'] = node
 
-        # Get room orientation from custom properties
-        room_orientation = node.custom_properties.get('orientation', 'LeftToRight')
+        # Get room orientation from custom properties (handle None case)
+        room_orientation = (node.custom_properties or {}).get('orientation', 'LeftToRight')
         context['room_orientation'] = room_orientation
         
         print(f"DEBUG: Room orientation: {room_orientation} for room {element_id}")
