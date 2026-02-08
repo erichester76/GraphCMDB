@@ -12,6 +12,60 @@ from django.template import Context, Template
 from django.conf import settings
 import importlib
 
+def build_properties_list_with_relationships(node):
+    """
+    Helper function to build a properties list that includes both regular properties
+    and relationships formatted as properties.
+    
+    Args:
+        node: A DynamicNode instance
+        
+    Returns:
+        list: A list of property dictionaries with keys: key, value, value_type, 
+              is_relationship, and optionally relationship_direction and relationship_data
+    """
+    custom_props = node.custom_properties or {}
+    props_list = []
+    
+    # Add regular properties
+    for key, value in custom_props.items():
+        props_list.append({
+            'key': key,
+            'value': value,
+            'value_type': type(value).__name__,
+            'is_relationship': False,
+        })
+    
+    # Get relationships
+    out_rels = node.get_outgoing_relationships()
+    in_rels = node.get_incoming_relationships()
+    
+    # Add outbound relationships as properties
+    for rel_type, targets in out_rels.items():
+        target_values = [f"{t['target_label']}:{t['target_name']}" for t in targets]
+        props_list.append({
+            'key': rel_type,
+            'value': ', '.join(target_values),
+            'value_type': 'relationship',
+            'is_relationship': True,
+            'relationship_direction': 'outbound',
+            'relationship_data': targets,
+        })
+    
+    # Add inbound relationships as properties
+    for rel_type, sources in in_rels.items():
+        source_values = [f"{s['source_label']}:{s['source_name']}" for s in sources]
+        props_list.append({
+            'key': f"{rel_type} (incoming)",
+            'value': ', '.join(source_values),
+            'value_type': 'relationship',
+            'is_relationship': True,
+            'relationship_direction': 'inbound',
+            'relationship_data': sources,
+        })
+    
+    return props_list
+
 @require_http_methods(["GET", "POST"])
 def type_register(request):
     if request.method == 'GET':
@@ -247,49 +301,12 @@ def node_detail(request, label, element_id):
         if not display_name:
             display_name = f"{element_id[:8]}..."
         
-        # Build properties list
-        props_list = []
-        for key, value in custom_props.items():
-            props_list.append({
-                'key': key,
-                'value': value,
-                'value_type': type(value).__name__,
-                'is_relationship': False,
-            })
-
-        # Use helper methods for relationship queries
+        # Build properties list with relationships using helper function
+        props_list = build_properties_list_with_relationships(node)
+        
+        # Get relationships for backwards compatibility with templates
         out_rels = node.get_outgoing_relationships()
         in_rels = node.get_incoming_relationships()
-        
-        # Add outbound relationships as properties
-        for rel_type, targets in out_rels.items():
-            # Format multiple targets as comma-separated string
-            target_values = []
-            for t in targets:
-                target_values.append(f"{t['target_label']}:{t['target_name']}")
-            props_list.append({
-                'key': rel_type,
-                'value': ', '.join(target_values),
-                'value_type': 'relationship',
-                'is_relationship': True,
-                'relationship_direction': 'outbound',
-                'relationship_data': targets,
-            })
-        
-        # Add inbound relationships as properties
-        for rel_type, sources in in_rels.items():
-            # Format multiple sources as comma-separated string
-            source_values = []
-            for s in sources:
-                source_values.append(f"{s['source_label']}:{s['source_name']}")
-            props_list.append({
-                'key': f"{rel_type} (incoming)",
-                'value': ', '.join(source_values),
-                'value_type': 'relationship',
-                'is_relationship': True,
-                'relationship_direction': 'inbound',
-                'relationship_data': sources,
-            })
 
         feature_pack_tabs = []
         for tab in getattr(settings, 'FEATURE_PACK_TABS', []):
@@ -650,54 +667,14 @@ def node_connect(request, label, element_id):
         if not node:
             raise ValueError("Source node not found")
         
-        # Build properties list just like in node_detail view
-        custom_props = node.custom_properties or {}
-        props_list = []
-        for key, value in custom_props.items():
-            props_list.append({
-                'key': key,
-                'value': value,
-                'value_type': type(value).__name__,
-                'is_relationship': False,
-            })
-
-        # Get updated relationships
-        out_rels = node.get_outgoing_relationships()
-        in_rels = node.get_incoming_relationships()
-        
-        # Add outbound relationships as properties
-        for rel_type_key, targets in out_rels.items():
-            target_values = []
-            for t in targets:
-                target_values.append(f"{t['target_label']}:{t['target_name']}")
-            props_list.append({
-                'key': rel_type_key,
-                'value': ', '.join(target_values),
-                'value_type': 'relationship',
-                'is_relationship': True,
-                'relationship_direction': 'outbound',
-                'relationship_data': targets,
-            })
-        
-        # Add inbound relationships as properties
-        for rel_type_key, sources in in_rels.items():
-            source_values = []
-            for s in sources:
-                source_values.append(f"{s['source_label']}:{s['source_name']}")
-            props_list.append({
-                'key': f"{rel_type_key} (incoming)",
-                'value': ', '.join(source_values),
-                'value_type': 'relationship',
-                'is_relationship': True,
-                'relationship_direction': 'inbound',
-                'relationship_data': sources,
-            })
+        # Build properties list using helper function
+        props_list = build_properties_list_with_relationships(node)
 
         return render(request, 'cmdb/partials/properties_section.html', {
             'properties_list': props_list,
             'element_id': element_id,
             'label': label,
-            'success_message': f"Relationship '{rel_type}' created"
+            'success_message': f"Relationship '{rel_type}' created successfully"
         })
     except Exception as e:
         # Return error in the properties section
@@ -729,53 +706,14 @@ def node_disconnect(request, label, element_id):
         if not node:
             raise ValueError("Source node not found")
         
-        # Build properties list just like in node_detail view
-        custom_props = node.custom_properties or {}
-        props_list = []
-        for key, value in custom_props.items():
-            props_list.append({
-                'key': key,
-                'value': value,
-                'value_type': type(value).__name__,
-                'is_relationship': False,
-            })
-
-        # Get updated relationships
-        out_rels = node.get_outgoing_relationships()
-        in_rels = node.get_incoming_relationships()
-        
-        # Add outbound relationships as properties
-        for rel_type_key, targets in out_rels.items():
-            target_values = []
-            for t in targets:
-                target_values.append(f"{t['target_label']}:{t['target_name']}")
-            props_list.append({
-                'key': rel_type_key,
-                'value': ', '.join(target_values),
-                'value_type': 'relationship',
-                'is_relationship': True,
-                'relationship_direction': 'outbound',
-                'relationship_data': targets,
-            })
-        
-        # Add inbound relationships as properties
-        for rel_type_key, sources in in_rels.items():
-            source_values = []
-            for s in sources:
-                source_values.append(f"{s['source_label']}:{s['source_name']}")
-            props_list.append({
-                'key': f"{rel_type_key} (incoming)",
-                'value': ', '.join(source_values),
-                'value_type': 'relationship',
-                'is_relationship': True,
-                'relationship_direction': 'inbound',
-                'relationship_data': sources,
-            })
+        # Build properties list using helper function
+        props_list = build_properties_list_with_relationships(node)
 
         return render(request, 'cmdb/partials/properties_section.html', {
             'properties_list': props_list,
             'element_id': element_id,
             'label': label,
+            'success_message': f"Relationship '{rel_type}' removed successfully"
         })
 
     except Exception as e:

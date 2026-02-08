@@ -1,6 +1,16 @@
 <div id="properties-section" class="mb-8">
+    {% if success_message %}
+        <div class="mb-4 p-3 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded">
+            {{ success_message }}
+        </div>
+    {% endif %}
+    {% if error_message %}
+        <div class="mb-4 p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+            {{ error_message }}
+        </div>
+    {% endif %}
     <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Properties & Relationships</h3>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Properties & Relationships</h3>
         <!-- Add Relationship Button -->
         {% if label and element_id %}
         <div x-data="{ openAddRelModal: false }">
