@@ -3,7 +3,7 @@
 from django.shortcuts import render
 from neomodel import db
 from cmdb.models import DynamicNode
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def audit_log_tab(request, label, element_id):
@@ -80,7 +80,7 @@ def create_audit_entry(action, node_label, node_id, node_name=None, user=None, c
         audit_node_class = DynamicNode.get_or_create_label('AuditLogEntry')
         
         properties = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'action': action,
             'node_label': node_label,
             'node_id': node_id,

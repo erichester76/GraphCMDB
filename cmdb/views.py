@@ -402,7 +402,7 @@ def node_edit(request, label, element_id):
             node_label=label,
             node_id=element_id,
             node_name=node_name,
-            user=request.user.username if request.user.is_authenticated else 'Anonymous',
+            user=request.user.username if request.user.is_authenticated else 'System',
             changes=f"Updated properties: {', '.join(changed_keys)}" if changed_keys else "Properties updated"
         )
 
@@ -440,7 +440,7 @@ def node_delete(request, label, element_id):
             node_label=label,
             node_id=element_id,
             node_name=node_name,
-            user=request.user.username if request.user.is_authenticated else 'Anonymous',
+            user=request.user.username if request.user.is_authenticated else 'System',
             changes='Node deleted'
         )
 
@@ -587,7 +587,7 @@ def node_create(request, label):
                 node_label=label,
                 node_id=node.element_id,
                 node_name=node_name,
-                user=request.user.username if request.user.is_authenticated else 'Anonymous',
+                user=request.user.username if request.user.is_authenticated else 'System',
                 changes=f"Created with properties: {', '.join(new_props.keys())}"
             )
 
@@ -636,7 +636,7 @@ def node_connect(request, label, element_id):
             node_label=label,
             node_id=element_id,
             node_name=node_name,
-            user=request.user.username if request.user.is_authenticated else 'Anonymous',
+            user=request.user.username if request.user.is_authenticated else 'System',
             relationship_type=rel_type,
             target_label=target_label,
             target_id=target_id
@@ -689,7 +689,7 @@ def node_disconnect(request, label, element_id):
             node_label=label,
             node_id=element_id,
             node_name=node_name,
-            user=request.user.username if request.user.is_authenticated else 'Anonymous',
+            user=request.user.username if request.user.is_authenticated else 'System',
             relationship_type=rel_type,
             target_label=target_label,
             target_id=target_id
