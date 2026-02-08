@@ -645,25 +645,64 @@ def node_connect(request, label, element_id):
         if not success:
             raise ValueError("Failed to create relationship")
 
-        # Get updated node and its relationships
+        # Get updated node and rebuild properties list with relationships
         node = node_class.get_by_element_id(element_id)
         if not node:
             raise ValueError("Source node not found")
-            
+        
+        # Build properties list just like in node_detail view
+        custom_props = node.custom_properties or {}
+        props_list = []
+        for key, value in custom_props.items():
+            props_list.append({
+                'key': key,
+                'value': value,
+                'value_type': type(value).__name__,
+                'is_relationship': False,
+            })
+
+        # Get updated relationships
         out_rels = node.get_outgoing_relationships()
         in_rels = node.get_incoming_relationships()
+        
+        # Add outbound relationships as properties
+        for rel_type_key, targets in out_rels.items():
+            target_values = []
+            for t in targets:
+                target_values.append(f"{t['target_label']}:{t['target_name']}")
+            props_list.append({
+                'key': rel_type_key,
+                'value': ', '.join(target_values),
+                'value_type': 'relationship',
+                'is_relationship': True,
+                'relationship_direction': 'outbound',
+                'relationship_data': targets,
+            })
+        
+        # Add inbound relationships as properties
+        for rel_type_key, sources in in_rels.items():
+            source_values = []
+            for s in sources:
+                source_values.append(f"{s['source_label']}:{s['source_name']}")
+            props_list.append({
+                'key': f"{rel_type_key} (incoming)",
+                'value': ', '.join(source_values),
+                'value_type': 'relationship',
+                'is_relationship': True,
+                'relationship_direction': 'inbound',
+                'relationship_data': sources,
+            })
 
-        return render(request, 'cmdb/partials/node_relationships.html', {
-            'inbound_relationships': in_rels,
-            'outbound_relationships': out_rels,
+        return render(request, 'cmdb/partials/properties_section.html', {
+            'properties_list': props_list,
             'element_id': element_id,
             'label': label,
             'success_message': f"Relationship '{rel_type}' created"
         })
     except Exception as e:
-        rels = {}
-        return render(request, 'cmdb/partials/node_relationships.html', {
-            'relationships': rels,
+        # Return error in the properties section
+        return render(request, 'cmdb/partials/properties_section.html', {
+            'properties_list': [],
             'element_id': element_id,
             'label': label,
             'error_message': str(e)
@@ -685,29 +724,68 @@ def node_disconnect(request, label, element_id):
         if deleted == 0:
             raise ValueError("Relationship not found")
 
-        # Get updated node and its relationships
+        # Get updated node and rebuild properties list with relationships
         node = node_class.get_by_element_id(element_id)
         if not node:
             raise ValueError("Source node not found")
-            
+        
+        # Build properties list just like in node_detail view
+        custom_props = node.custom_properties or {}
+        props_list = []
+        for key, value in custom_props.items():
+            props_list.append({
+                'key': key,
+                'value': value,
+                'value_type': type(value).__name__,
+                'is_relationship': False,
+            })
+
+        # Get updated relationships
         out_rels = node.get_outgoing_relationships()
         in_rels = node.get_incoming_relationships()
+        
+        # Add outbound relationships as properties
+        for rel_type_key, targets in out_rels.items():
+            target_values = []
+            for t in targets:
+                target_values.append(f"{t['target_label']}:{t['target_name']}")
+            props_list.append({
+                'key': rel_type_key,
+                'value': ', '.join(target_values),
+                'value_type': 'relationship',
+                'is_relationship': True,
+                'relationship_direction': 'outbound',
+                'relationship_data': targets,
+            })
+        
+        # Add inbound relationships as properties
+        for rel_type_key, sources in in_rels.items():
+            source_values = []
+            for s in sources:
+                source_values.append(f"{s['source_label']}:{s['source_name']}")
+            props_list.append({
+                'key': f"{rel_type_key} (incoming)",
+                'value': ', '.join(source_values),
+                'value_type': 'relationship',
+                'is_relationship': True,
+                'relationship_direction': 'inbound',
+                'relationship_data': sources,
+            })
 
-        return render(request, 'cmdb/partials/node_relationships.html', {
-            'inbound_relationships': in_rels,
-            'outbound_relationships': out_rels,
+        return render(request, 'cmdb/partials/properties_section.html', {
+            'properties_list': props_list,
             'element_id': element_id,
             'label': label,
-            'success_message': f"Relationship '{rel_type}' removed"
         })
 
     except Exception as e:
-        rels = {}
-        return render(request, 'cmdb/partials/node_relationships.html', {
-            'relationships': rels,
+        # Return error in the properties section
+        return render(request, 'cmdb/partials/properties_section.html', {
+            'properties_list': [],
             'element_id': element_id,
             'label': label,
             'error_message': str(e)
+        })
         })
         
 @require_http_methods(["GET"])

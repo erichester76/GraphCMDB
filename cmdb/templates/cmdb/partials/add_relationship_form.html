@@ -2,8 +2,8 @@
 
 <form 
     hx-post="{% url 'cmdb:node_connect' label element_id %}"
-    hx-target="#relationships-section"
-    hx-swap="innerHTML"
+    hx-target="#properties-section"
+    hx-swap="outerHTML"
     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
     hx-on::after-request="if(event.detail.successful) { document.getElementById('add-rel-modal').close(); }">
 

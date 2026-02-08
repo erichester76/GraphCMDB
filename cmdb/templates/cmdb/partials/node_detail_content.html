@@ -64,7 +64,7 @@
             <!-- Core Details Panel -->
             <div x-show="activeTab === 'core'" x-transition>
                 <!-- Properties and Relationships in Compact Grid -->
-                <div class="mb-8">
+                <div id="properties-section" class="mb-8">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-medium text-gray-900 mb-4">Properties & Relationships</h3>
                         <!-- Add Relationship Button -->
@@ -124,8 +124,8 @@
                                                         {{ t.target_label }}:{{ t.target_name }}
                                                     </a>
                                                     <button hx-post="{% url 'cmdb:node_disconnect' label element_id %}"
-                                                            hx-vars='{ "rel_type": "{{ prop.key }}", "target_id": "{{ t.target_id }}", "target_label": "{{ t.target_label }}" }'
-                                                            hx-target="closest .bg-gray-50"
+                                                            hx-vals='{"rel_type": "{{ prop.key }}", "target_id": "{{ t.target_id }}", "target_label": "{{ t.target_label }}"}'
+                                                            hx-target="#properties-section"
                                                             hx-swap="outerHTML"
                                                             hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
                                                             hx-confirm="Disconnect this relationship?"
