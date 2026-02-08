@@ -45,6 +45,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.csrf',
                 'cmdb.context_processors.categories_context',
+                'cmdb.context_processors.user_permissions_context',
             ],
         },
     },
