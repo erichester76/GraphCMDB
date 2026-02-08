@@ -130,3 +130,11 @@ class CoreConfig(AppConfig):
                         print(f"[DEBUG] Added tab: {tab.get('id', 'unknown')}")
         
         print(f"[DEBUG] Feature pack loading complete")
+        
+        # Sync permissions for all registered node types
+        try:
+            from cmdb.permissions import sync_all_node_type_permissions
+            print(f"[DEBUG] Syncing permissions for node types...")
+            sync_all_node_type_permissions()
+        except Exception as e:
+            print(f"[DEBUG] Could not sync permissions (database may not be ready): {e}")

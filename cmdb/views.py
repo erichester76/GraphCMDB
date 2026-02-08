@@ -1,5 +1,5 @@
 # cmdb/views.py
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .models import DynamicNode
 from .registry import TypeRegistry
 from django.http import HttpResponse, JsonResponse
@@ -10,9 +10,14 @@ from django.views.decorators.http import require_http_methods
 from neomodel import db, RelationshipTo
 from django.template import Context, Template
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 import importlib
 import pandas as pd
 import io
+
+# Import permission utilities
+from users.views import has_node_permission, node_permission_required
 
 # Constants for import functionality
 RELATIONSHIP_SUFFIX = '_names'
@@ -218,6 +223,8 @@ def dashboard(request):
     
     return render(request, 'cmdb/dashboard.html', context)
 
+@login_required
+@node_permission_required('view')
 def nodes_list(request, label):
     """
     List view for nodes of a specific label
@@ -324,6 +331,8 @@ def node_add_relationship_form(request, label, element_id):
     except Exception as e:
         return HttpResponse(f'<div class="p-4 bg-red-100 text-red-800 rounded">Error loading form: {str(e)}</div>')
     
+@login_required
+@node_permission_required('view')
 def node_detail(request, label, element_id):
     try:
         node_class = DynamicNode.get_or_create_label(label)
@@ -399,6 +408,8 @@ def node_detail(request, label, element_id):
         return render(request, 'cmdb/node_detail.html', {'error': f"Error: {str(e)}"})
     
 @require_http_methods(["GET", "POST"])
+@login_required
+@node_permission_required('change')
 def node_edit(request, label, element_id):
     
     try:
@@ -538,6 +549,8 @@ def node_edit(request, label, element_id):
     
     
 @require_http_methods(["POST"])
+@login_required
+@node_permission_required('delete')
 def node_delete(request, label, element_id):
     try:
         node_class = DynamicNode.get_or_create_label(label)
@@ -625,6 +638,8 @@ def node_delete(request, label, element_id):
         })
         
 @require_http_methods(["GET", "POST"])
+@login_required
+@node_permission_required('add')
 def node_create(request, label):
     try:
         meta = TypeRegistry.get_metadata(label)
@@ -755,7 +770,9 @@ def node_create(request, label):
         context['error'] = str(e)
         return render(request, 'cmdb/partials/node_create_form.html', context)
 
-@require_http_methods(["POST"]) 
+@require_http_methods(["POST"])
+@login_required
+@node_permission_required('change')
 def node_connect(request, label, element_id):
     try:
         rel_type = request.POST.get('rel_type', '').strip().upper()
@@ -810,6 +827,8 @@ def node_connect(request, label, element_id):
         })
         
 @require_http_methods(["POST"])
+@login_required
+@node_permission_required('change')
 def node_disconnect(request, label, element_id):
     try:
         rel_type = request.POST.get('rel_type', '').strip().upper()
@@ -939,6 +958,8 @@ def audit_log_list(request):
     return render(request, 'cmdb/audit_log_list.html', context)
 
 @require_http_methods(["GET", "POST"])
+@login_required
+@node_permission_required('add')
 def node_import(request, label):
     """
     Handle bulk node import from CSV/XLS files

@@ -81,22 +81,23 @@ def has_node_permission(user, action, label=None):
     if user.is_superuser:
         return True
     
-    # Staff users have broad permissions
-    if user.is_staff:
+    # Staff users have broad permissions (but not all - they still need explicit perms)
+    if user.is_staff and label is None:
         return True
     
-    # Check Django permissions
-    # Format: app_label.action_modelname
+    # Check Django permissions for specific node type
+    # Format: cmdb.action_nodetype (e.g., 'cmdb.view_device')
     if label:
         perm_name = f'cmdb.{action}_{label.lower()}'
         if user.has_perm(perm_name):
             return True
     
-    # Check group-based permissions
-    for group in user.groups.all():
-        # Groups can have custom permissions
-        if group.permissions.filter(codename__startswith=action).exists():
-            return True
+    # If no label specified, check if user has ANY permission with this action
+    if label is None:
+        # Check if user has any permissions starting with this action
+        for perm in user.get_all_permissions():
+            if perm.startswith(f'cmdb.{action}_'):
+                return True
     
     return False
 
