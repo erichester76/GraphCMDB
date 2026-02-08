@@ -8,7 +8,8 @@
 {% block header_actions %}
     <div class="flex items-center gap-4" 
          x-data="listViewManager('{{ label }}', {{ columns_json }}, {{ all_properties_json }})"
-         @htmx:after-swap.window="$el.closest('[x-data]').__x && $el.closest('[x-data]').__x.$data.initFromStorage()">
+         @htmx:after-swap.window="$el.closest('[x-data]').__x && $el.closest('[x-data]').__x.$data.initFromStorage()"
+         @sort-column.window="sortBy($event.detail.column)">
         
         <!-- Column Selector -->
         <div class="relative" @click.away="dropdownOpen = false">
@@ -153,6 +154,8 @@ function listViewManager(label, defaultColumns, allProperties) {
         visibleColumns: defaultColumns.slice(), // Clone array to avoid mutation
         filterText: '',
         dropdownOpen: false,
+        sortColumn: null,
+        sortDirection: 'asc', // 'asc' or 'desc'
         
         init() {
             this.initFromStorage();
@@ -223,6 +226,67 @@ function listViewManager(label, defaultColumns, allProperties) {
                 
                 row.style.display = rowText.includes(filterLower) ? '' : 'none';
             });
+        },
+        
+        sortBy(column) {
+            // Toggle direction if clicking the same column
+            if (this.sortColumn === column) {
+                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortColumn = column;
+                this.sortDirection = 'asc';
+            }
+            
+            this.applySorting();
+            
+            // Dispatch event to update table indicators using Alpine's $dispatch
+            this.$dispatch('sort-updated', {
+                column: this.sortColumn, 
+                direction: this.sortDirection
+            });
+        },
+        
+        applySorting() {
+            // Scope tbody to the nodes table to avoid conflicts with other tables
+            const tbody = document.querySelector('#nodes-content tbody');
+            if (!tbody) return;
+            
+            const rows = Array.from(tbody.querySelectorAll('.node-row'));
+            
+            // Cache cell data to avoid O(n²) DOM queries during sort
+            const rowsWithData = rows.map(row => {
+                const cell = row.querySelector(`td[data-column="${this.sortColumn}"]`);
+                const value = cell?.textContent.trim() || '';
+                const numValue = parseFloat(value);
+                return {
+                    row,
+                    value,
+                    numValue,
+                    isNumeric: !isNaN(numValue)
+                };
+            });
+            
+            rowsWithData.sort((a, b) => {
+                // Handle empty values
+                if (!a.value && !b.value) return 0;
+                if (!a.value) return 1;
+                if (!b.value) return -1;
+                
+                // Use cached numeric values for comparison
+                if (a.isNumeric && b.isNumeric) {
+                    // Numeric comparison
+                    return this.sortDirection === 'asc' ? 
+                        a.numValue - b.numValue : 
+                        b.numValue - a.numValue;
+                } else {
+                    // String comparison (case-insensitive)
+                    const comparison = a.value.toLowerCase().localeCompare(b.value.toLowerCase());
+                    return this.sortDirection === 'asc' ? comparison : -comparison;
+                }
+            });
+            
+            // Re-append rows in sorted order
+            rowsWithData.forEach(item => tbody.appendChild(item.row));
         }
     };
 }
