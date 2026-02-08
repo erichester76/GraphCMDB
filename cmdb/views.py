@@ -14,6 +14,10 @@ import importlib
 import pandas as pd
 import io
 
+# Constants for import functionality
+RELATIONSHIP_SUFFIX = '_names'
+CSV_ROW_OFFSET = 2  # Offset for error messages: 0-based index + header row
+
 # Import audit log utility if available
 try:
     import sys
@@ -918,7 +922,7 @@ def node_import(request, label):
                 headers = properties.copy()
                 # Add relationship columns
                 for rel_type, rel_info in relationships.items():
-                    headers.append(f"{rel_type}_names")
+                    headers.append(f"{rel_type}{RELATIONSHIP_SUFFIX}")
                 
                 # Create DataFrame with headers only
                 df = pd.DataFrame(columns=headers)
@@ -973,8 +977,8 @@ def node_import(request, label):
                         continue
                     
                     # Check if this is a relationship column
-                    if col.endswith('_names'):
-                        rel_type = col[:-6]  # Remove '_names' suffix
+                    if col.endswith(RELATIONSHIP_SUFFIX):
+                        rel_type = col[:-len(RELATIONSHIP_SUFFIX)]  # Remove suffix
                         # Relationship types in metadata are uppercase (e.g., BELONGS_TO)
                         # Check if this matches a known relationship (case-insensitive)
                         rel_type_upper = rel_type.upper()
@@ -994,7 +998,7 @@ def node_import(request, label):
                 # Validate required properties
                 missing = [r for r in required_props if r not in node_props or not node_props[r]]
                 if missing:
-                    errors.append(f"Row {idx + 2}: Missing required properties: {', '.join(missing)}")
+                    errors.append(f"Row {idx + CSV_ROW_OFFSET}: Missing required properties: {', '.join(missing)}")
                     continue
                 
                 # Create node
@@ -1020,7 +1024,7 @@ def node_import(request, label):
                 )
                 
             except Exception as e:
-                errors.append(f"Row {idx + 2}: {str(e)}")
+                errors.append(f"Row {idx + CSV_ROW_OFFSET}: {str(e)}")
         
         # Process queued relationships
         for item in relationship_queue:
@@ -1037,6 +1041,12 @@ def node_import(request, label):
                 
                 if not target_label:
                     errors.append(f"Node '{node_name}': Unknown relationship type '{rel_type}'")
+                    continue
+                
+                # Validate target_label to prevent injection
+                # Target labels come from metadata but validate for safety
+                if not target_label or not target_label.replace('_', '').isalnum():
+                    errors.append(f"Node '{node_name}': Invalid target label '{target_label}' for relationship '{rel_type}'")
                     continue
                 
                 # Find target nodes by name
