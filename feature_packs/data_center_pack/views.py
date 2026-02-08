@@ -3,7 +3,6 @@
 from django.shortcuts import render
 from neomodel import db
 from cmdb.models import DynamicNode
-import apoc
 
 def rack_elevation_tab(request, label, element_id):
     context = {
