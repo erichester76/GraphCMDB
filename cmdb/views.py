@@ -1037,7 +1037,7 @@ def node_import(request, label):
                 
                 # Get target label from relationships metadata
                 rel_info = relationships.get(rel_type, {})
-                target_label = rel_info.get('target_label')
+                target_label = rel_info.get('target')  # Field is 'target' not 'target_label'
                 
                 if not target_label:
                     errors.append(f"Node '{node_name}': Unknown relationship type '{rel_type}'")

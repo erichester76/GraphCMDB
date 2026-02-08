@@ -85,7 +85,7 @@
                     <li><strong>Relationship columns:</strong> Add columns with suffix "_names" to create relationships (case-insensitive, e.g., "BELONGS_TO_names" or "belongs_to_names"). Reference target nodes by their name property. Use comma-separated values for multiple relationships.
                         <ul class="ml-6 mt-1 list-disc">
                             {% for rel_type, rel_info in relationships.items %}
-                            <li>{{ rel_type }}_names → {{ rel_info.target_label }}</li>
+                            <li>{{ rel_type }}_names → {{ rel_info.target }}</li>
                             {% endfor %}
                         </ul>
                     </li>
