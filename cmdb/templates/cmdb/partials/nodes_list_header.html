@@ -6,7 +6,8 @@
      hx-on::after-swap="console.log('Header swapped via OOB'); if(window.Alpine){Alpine.nextTick(()=>console.log('Alpine tick'));}">
     <div class="flex items-center gap-4" 
          x-data="listViewManager('{{ label }}', {{ columns_json }}, {{ all_properties_json }})"
-         x-init="console.log('Alpine init for:', label, 'columns:', availableColumns); init();">
+         x-init="console.log('Alpine init for:', label, 'columns:', availableColumns); init();"
+         @htmx:after-swap.window="$el.closest('[x-data]').__x && $el.closest('[x-data]').__x.$data.initFromStorage()">
         
         <!-- Column Selector -->
         <div class="relative" @click.away="dropdownOpen = false">

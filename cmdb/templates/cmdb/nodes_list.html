@@ -153,6 +153,8 @@ function listViewManager(label, defaultColumns, allProperties) {
         visibleColumns: defaultColumns.slice(), // Clone array to avoid mutation
         filterText: '',
         dropdownOpen: false,
+        sortColumn: null,
+        sortDirection: 'asc', // 'asc' or 'desc'
         
         init() {
             this.initFromStorage();
@@ -223,6 +225,74 @@ function listViewManager(label, defaultColumns, allProperties) {
                 
                 row.style.display = rowText.includes(filterLower) ? '' : 'none';
             });
+        },
+        
+        sortBy(column) {
+            // Toggle direction if clicking the same column
+            if (this.sortColumn === column) {
+                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortColumn = column;
+                this.sortDirection = 'asc';
+            }
+            
+            this.applySorting();
+        },
+        
+        sortById() {
+            // Toggle direction if clicking the same column
+            if (this.sortColumn === 'id') {
+                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortColumn = 'id';
+                this.sortDirection = 'asc';
+            }
+            
+            this.applySorting();
+        },
+        
+        applySorting() {
+            const tbody = document.querySelector('tbody');
+            if (!tbody) return;
+            
+            const rows = Array.from(tbody.querySelectorAll('.node-row'));
+            
+            rows.sort((a, b) => {
+                let aValue, bValue;
+                
+                if (this.sortColumn === 'id') {
+                    // Sort by ID column
+                    aValue = a.querySelector('td:first-child')?.textContent.trim() || '';
+                    bValue = b.querySelector('td:first-child')?.textContent.trim() || '';
+                } else {
+                    // Sort by data column
+                    const aCell = a.querySelector(`td[data-column="${this.sortColumn}"]`);
+                    const bCell = b.querySelector(`td[data-column="${this.sortColumn}"]`);
+                    aValue = aCell?.textContent.trim() || '';
+                    bValue = bCell?.textContent.trim() || '';
+                }
+                
+                // Handle empty values
+                if (!aValue && !bValue) return 0;
+                if (!aValue) return 1;
+                if (!bValue) return -1;
+                
+                // Try to parse as numbers for numeric comparison
+                const aNum = parseFloat(aValue);
+                const bNum = parseFloat(bValue);
+                
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    // Numeric comparison
+                    return this.sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+                } else {
+                    // String comparison (case-insensitive)
+                    const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+                    return this.sortDirection === 'asc' ? comparison : -comparison;
+                }
+            });
+            
+            // Re-append rows in sorted order
+            rows.forEach(row => tbody.appendChild(row));
         }
     };
 }
