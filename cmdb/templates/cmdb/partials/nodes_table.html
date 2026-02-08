@@ -225,7 +225,7 @@ function paginationManager(initialPage, initialPerPage, initialTotalCount, initi
         },
         
         goToPage(page) {
-            if (page < 1 || page > this.totalPages || page === this.currentPage || this.totalPages === 0) return;
+            if (this.totalPages === 0 || page < 1 || page > this.totalPages || page === this.currentPage) return;
             
             // Use HTMX to fetch the new page
             const url = `/cmdb/nodes/${this.label}/?page=${page}&per_page=${this.perPage}`;
