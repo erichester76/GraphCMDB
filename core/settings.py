@@ -12,10 +12,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',            # Django REST Framework
     'django_htmx',
-    'graphene_django',          # GraphQL support
-    'cmdb.apps.CmdbConfig',     # our app
-    'core.apps.CoreConfig',     # core app with feature pack loading
+    'graphene_django',           # GraphQL support
+    'cmdb.apps.CmdbConfig',      # our app
+    'core.apps.CoreConfig',      # core app with feature pack loading
 ]
 
 MIDDLEWARE = [
@@ -53,8 +54,30 @@ GRAPHENE = {
     'SCHEMA': 'cmdb.schema.schema'   
 }
 
+# Django REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 100,
+}
+
 # Neo4j connection (used by neomodel)
 NEO4J_BOLT_URL = 'bolt://neo4j:23r9u4230rusfd@neo4j:7687'
+
+# Django database configuration (used for built-in apps like auth, sessions, contenttypes)
+# Main CMDB data is stored in Neo4j, but Django requires a database for its internal tables
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
 
 ALLOWED_HOSTS = ['*']           # only for local dev!
 DEBUG = True
