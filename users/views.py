@@ -118,8 +118,27 @@ def node_permission_required(action, label_param='label'):
             
             label = kwargs.get(label_param)
             if not has_node_permission(request.user, action, label):
-                messages.error(request, 'You do not have permission to perform this action.')
-                return redirect('cmdb:dashboard')
+                # Provide more specific error message
+                action_name = {
+                    'view': 'view',
+                    'add': 'create',
+                    'change': 'modify',
+                    'delete': 'delete'
+                }.get(action, action)
+                
+                if label:
+                    messages.error(request, f'Access Denied: You do not have permission to {action_name} {label} nodes.')
+                else:
+                    messages.error(request, f'Access Denied: You do not have permission to perform this action.')
+                
+                # Try to redirect to a more contextual page
+                referer = request.META.get('HTTP_REFERER')
+                if referer and 'cmdb' in referer:
+                    # If coming from within the app, go back to referer
+                    return redirect(referer)
+                else:
+                    # Otherwise go to dashboard
+                    return redirect('cmdb:dashboard')
             
             return view_func(request, *args, **kwargs)
         return wrapper
@@ -130,7 +149,7 @@ def node_permission_required(action, label_param='label'):
 def user_list(request):
     """List all users (staff only)."""
     if not request.user.is_staff:
-        messages.error(request, 'You do not have permission to view this page.')
+        messages.error(request, 'Access Denied: Only staff members can view the user list.')
         return redirect('cmdb:dashboard')
     
     users = User.objects.all().prefetch_related('groups')
@@ -144,7 +163,7 @@ def user_list(request):
 def group_list(request):
     """List all groups (staff only)."""
     if not request.user.is_staff:
-        messages.error(request, 'You do not have permission to view this page.')
+        messages.error(request, 'Access Denied: Only staff members can view groups.')
         return redirect('cmdb:dashboard')
     
     groups = Group.objects.all().prefetch_related('permissions', 'user_set')
