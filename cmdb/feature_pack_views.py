@@ -5,9 +5,8 @@ Views for managing feature packs - enabling/disabling and viewing status.
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
-from cmdb.feature_pack_models import (
-    FeaturePackNode, TypeDefinitionNode
-)
+from cmdb.feature_pack_models import FeaturePackNode
+from cmdb.registry import TypeRegistry
 import json
 
 
@@ -20,8 +19,8 @@ def feature_pack_list(request):
         
         pack_info = []
         for pack in packs:
-            # Get types for this pack
-            types = TypeDefinitionNode.get_types_for_pack(pack.name)
+            # Get types for this pack from TypeRegistry
+            types = TypeRegistry.get_types_for_pack(pack.name)
             
             pack_info.append({
                 'name': pack.name,
@@ -31,7 +30,7 @@ def feature_pack_list(request):
                 'last_modified': pack.last_modified.isoformat() if pack.last_modified else None,
                 'last_synced': pack.last_synced.isoformat() if pack.last_synced else None,
                 'type_count': len(types),
-                'types': [t.label for t in types],
+                'types': types,
                 'config': pack.config,
             })
         
@@ -68,12 +67,6 @@ def feature_pack_enable(request, pack_name):
         
         pack.enable()
         
-        # Also enable all types from this pack
-        types = TypeDefinitionNode.get_types_for_pack(pack_name)
-        for type_def in types:
-            type_def.enabled = True
-            type_def.save()
-        
         return JsonResponse({
             'success': True,
             'message': f'Feature pack "{pack.display_name}" enabled successfully',
@@ -102,12 +95,6 @@ def feature_pack_disable(request, pack_name):
         
         pack.disable()
         
-        # Also disable all types from this pack
-        types = TypeDefinitionNode.get_types_for_pack(pack_name)
-        for type_def in types:
-            type_def.enabled = False
-            type_def.save()
-        
         return JsonResponse({
             'success': True,
             'message': f'Feature pack "{pack.display_name}" disabled successfully',
@@ -132,15 +119,16 @@ def feature_pack_detail(request, pack_name):
                 'error': f'Feature pack "{pack_name}" not found',
             })
         
-        # Get types for this pack
-        types = TypeDefinitionNode.get_types_for_pack(pack.name)
+        # Get types for this pack from TypeRegistry
+        type_labels = TypeRegistry.get_types_for_pack(pack.name)
         
         type_info = []
-        for type_def in types:
+        for label in type_labels:
+            metadata = TypeRegistry.get_metadata(label)
             type_info.append({
-                'label': type_def.label,
-                'enabled': type_def.enabled,
-                'metadata': type_def.metadata,
+                'label': label,
+                'enabled': pack.enabled,  # Types follow pack enable/disable state
+                'metadata': metadata,
             })
         
         context = {
