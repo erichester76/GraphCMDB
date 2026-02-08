@@ -1,4 +1,5 @@
 {% load cmdb_extras %}
+<div x-data="paginationManager({{ page }}, {{ per_page }}, {{ total_count }}, {{ total_pages }}, '{{ label|escapejs }}')">
 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700" 
        x-data="{ 
            sortColumn: null,
@@ -78,6 +79,204 @@
         {% endfor %}
     </tbody>
 </table>
+
+<!-- Pagination Controls -->
+<div class="bg-white dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700 sm:px-6">
+    <!-- Mobile: Vertical layout -->
+    <div class="sm:hidden space-y-3">
+        <!-- Previous/Next buttons -->
+        <div class="flex justify-between">
+            <button 
+                @click="goToPage(currentPage - 1)"
+                :disabled="currentPage <= 1"
+                :class="currentPage <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800">
+                Previous
+            </button>
+            <button 
+                @click="goToPage(currentPage + 1)"
+                :disabled="currentPage >= totalPages"
+                :class="currentPage >= totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800">
+                Next
+            </button>
+        </div>
+        <!-- Range display (centered) -->
+        <div class="text-center">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+                Showing
+                <span class="font-medium" x-text="startItem"></span>
+                to
+                <span class="font-medium" x-text="endItem"></span>
+                of
+                <span class="font-medium" x-text="totalCount"></span>
+                results
+            </p>
+        </div>
+        <!-- Per-page selector (centered) -->
+        <div class="flex items-center justify-center gap-2">
+            <label for="perPage-mobile" class="text-sm text-gray-700 dark:text-gray-300">Per page:</label>
+            <select 
+                id="perPage-mobile"
+                x-model="perPage"
+                @change="changePerPage()"
+                class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Desktop: Horizontal layout with centered info -->
+    <div class="hidden sm:flex sm:items-center sm:justify-between">
+        <!-- Left: Previous button -->
+        <div>
+            <button 
+                @click="goToPage(currentPage - 1)"
+                :disabled="currentPage <= 1"
+                :class="currentPage <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800">
+                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+            </button>
+        </div>
+        
+        <!-- Center: Range display and per-page selector -->
+        <div class="flex items-center gap-6">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+                Showing
+                <span class="font-medium" x-text="startItem"></span>
+                to
+                <span class="font-medium" x-text="endItem"></span>
+                of
+                <span class="font-medium" x-text="totalCount"></span>
+                results
+            </p>
+            <div class="flex items-center gap-2">
+                <label for="perPage" class="text-sm text-gray-700 dark:text-gray-300">Per page:</label>
+                <select 
+                    id="perPage"
+                    x-model="perPage"
+                    @change="changePerPage()"
+                    class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Right: Next button -->
+        <div>
+            <button 
+                @click="goToPage(currentPage + 1)"
+                :disabled="currentPage >= totalPages"
+                :class="currentPage >= totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800">
+                Next
+                <svg class="h-5 w-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+/**
+ * Alpine.js Pagination Manager
+ * 
+ * Note: This is a custom implementation because Alpine.js does NOT provide
+ * pre-built pagination components. Unlike React/Vue, Alpine.js is a lightweight
+ * reactive framework, not a component library.
+ * 
+ * Why custom implementation?
+ * 1. No Alpine.js pagination libraries exist (checked npm/community)
+ * 2. Generic JS pagination libs don't integrate with Alpine.js + HTMX
+ * 3. This approach is standard for Alpine.js projects
+ * 4. Provides full control for server-side pagination with HTMX
+ * 
+ * This component manages:
+ * - Current page state
+ * - Items per page selection (with localStorage persistence)
+ * - Page number generation with smart visibility
+ * - Navigation via HTMX for server-side pagination
+ */
+function paginationManager(initialPage, initialPerPage, initialTotalCount, initialTotalPages, label) {
+    // Load saved page size from localStorage, fall back to initialPerPage
+    const savedPerPage = localStorage.getItem('cmdb_pagination_perPage');
+    const perPageValue = savedPerPage ? parseInt(savedPerPage, 10) : initialPerPage;
+    
+    return {
+        currentPage: initialPage,
+        perPage: perPageValue,
+        totalCount: initialTotalCount,
+        totalPages: initialTotalPages,
+        label: label,
+        
+        init() {
+            // If the saved perPage differs from initial and we're on page 1, reload with saved preference
+            if (savedPerPage && perPageValue !== initialPerPage && this.currentPage === 1) {
+                this.changePerPage();
+            }
+        },
+        
+        // Calculate the starting item number for current page
+        get startItem() {
+            if (this.totalCount === 0) return 0;
+            return (this.currentPage - 1) * this.perPage + 1;
+        },
+        
+        // Calculate the ending item number for current page
+        get endItem() {
+            const end = this.currentPage * this.perPage;
+            return end > this.totalCount ? this.totalCount : end;
+        },
+        
+        // Generate array of page numbers to display (max 5 visible)
+        get pageNumbers() {
+            const pages = [];
+            const maxVisible = 5;
+            let start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
+            let end = Math.min(this.totalPages, start + maxVisible - 1);
+            
+            // Adjust start if we're near the end
+            if (end - start < maxVisible - 1) {
+                start = Math.max(1, end - maxVisible + 1);
+            }
+            
+            for (let i = start; i <= end; i++) {
+                pages.push(i);
+            }
+            return pages;
+        },
+        
+        // Navigate to a specific page using HTMX
+        goToPage(page) {
+            if (this.totalPages === 0 || page < 1 || page > this.totalPages || page === this.currentPage) return;
+            
+            // Use HTMX to fetch the new page from server
+            const url = `/cmdb/${this.label}/?page=${page}&per_page=${this.perPage}`;
+            htmx.ajax('GET', url, {target: '#nodes-content', swap: 'innerHTML'});
+        },
+        
+        // Change items per page and reset to page 1
+        changePerPage() {
+            // Save to localStorage for persistence
+            localStorage.setItem('cmdb_pagination_perPage', this.perPage);
+            
+            const url = `/cmdb/${this.label}/?page=1&per_page=${this.perPage}`;
+            htmx.ajax('GET', url, {target: '#nodes-content', swap: 'innerHTML'});
+        }
+    };
+}
+</script>
 
 <!-- Edit Modal (placeholder - filled by HTMX) -->
 <dialog id="edit-modal" 
