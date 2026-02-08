@@ -5,11 +5,20 @@ Views for managing feature packs - enabling/disabling and viewing status.
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
 from cmdb.feature_pack_models import FeaturePackNode
 from cmdb.registry import TypeRegistry
 import json
 
 
+def is_staff_user(user):
+    """Check if user is staff (required for feature pack management)."""
+    return user.is_staff
+
+
+@login_required
+@user_passes_test(is_staff_user)
 def feature_pack_list(request):
     """
     Display all feature packs with their status (enabled/disabled).
@@ -52,6 +61,8 @@ def feature_pack_list(request):
         })
 
 
+@login_required
+@user_passes_test(is_staff_user)
 @require_http_methods(["POST"])
 def feature_pack_enable(request, pack_name):
     """
@@ -151,6 +162,8 @@ def feature_pack_detail(request, pack_name):
         })
 
 
+@login_required
+@user_passes_test(is_staff_user)
 def feature_pack_status_api(request):
     """
     API endpoint to get feature pack status as JSON.
