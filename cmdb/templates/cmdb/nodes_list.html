@@ -253,34 +253,40 @@ function listViewManager(label, defaultColumns, allProperties) {
             
             const rows = Array.from(tbody.querySelectorAll('.node-row'));
             
-            rows.sort((a, b) => {
-                // Sort by data-column attribute for all columns including ID
-                const aCell = a.querySelector(`td[data-column="${this.sortColumn}"]`);
-                const bCell = b.querySelector(`td[data-column="${this.sortColumn}"]`);
-                const aValue = aCell?.textContent.trim() || '';
-                const bValue = bCell?.textContent.trim() || '';
-                
+            // Cache cell data to avoid O(n²) DOM queries during sort
+            const rowsWithData = rows.map(row => {
+                const cell = row.querySelector(`td[data-column="${this.sortColumn}"]`);
+                const value = cell?.textContent.trim() || '';
+                const numValue = parseFloat(value);
+                return {
+                    row,
+                    value,
+                    numValue,
+                    isNumeric: !isNaN(numValue)
+                };
+            });
+            
+            rowsWithData.sort((a, b) => {
                 // Handle empty values
-                if (!aValue && !bValue) return 0;
-                if (!aValue) return 1;
-                if (!bValue) return -1;
+                if (!a.value && !b.value) return 0;
+                if (!a.value) return 1;
+                if (!b.value) return -1;
                 
-                // Try to parse as numbers for numeric comparison
-                const aNum = parseFloat(aValue);
-                const bNum = parseFloat(bValue);
-                
-                if (!isNaN(aNum) && !isNaN(bNum)) {
+                // Use cached numeric values for comparison
+                if (a.isNumeric && b.isNumeric) {
                     // Numeric comparison
-                    return this.sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+                    return this.sortDirection === 'asc' ? 
+                        a.numValue - b.numValue : 
+                        b.numValue - a.numValue;
                 } else {
                     // String comparison (case-insensitive)
-                    const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+                    const comparison = a.value.toLowerCase().localeCompare(b.value.toLowerCase());
                     return this.sortDirection === 'asc' ? comparison : -comparison;
                 }
             });
             
             // Re-append rows in sorted order
-            rows.forEach(row => tbody.appendChild(row));
+            rowsWithData.forEach(item => tbody.appendChild(item.row));
         }
     };
 }
