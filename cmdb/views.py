@@ -643,10 +643,16 @@ def node_create(request, label):
 
             form_fields = []
             
+            # Debug: Log what we received from metadata
+            print(f"[DEBUG node_create] Label: {label}")
+            print(f"[DEBUG node_create] Properties from metadata: {props}")
+            
             for prop_def in props:
                 parsed_prop = parse_property_definition(prop_def)
                 prop_name = parsed_prop['name']
                 choices = parsed_prop['choices']
+                
+                print(f"[DEBUG node_create] Parsed property: name={prop_name}, choices={choices}")
                 
                 field_data = {
                     'key': prop_name,
@@ -660,6 +666,10 @@ def node_create(request, label):
                     field_data['choices'] = choices
                 
                 form_fields.append(field_data)
+            
+            print(f"[DEBUG node_create] Generated {len(form_fields)} form fields")
+            for field in form_fields:
+                print(f"[DEBUG node_create]   Field: {field['key']} -> type={field['type']}, has_choices={('choices' in field)}")
             
             context = {
                 'label': label,
