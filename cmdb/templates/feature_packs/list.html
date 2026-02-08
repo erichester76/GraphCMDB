@@ -78,7 +78,7 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Disabled</dt>
-                            <dd class="text-lg font-semibold text-gray-900 dark:text-white">{{ total_packs|add:"-"|add:enabled_packs|default:0 }}</dd>
+                            <dd class="text-lg font-semibold text-gray-900 dark:text-white">{{ disabled_packs }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -181,10 +181,12 @@ function togglePack(packName, enable) {
     const action = enable ? 'enable' : 'disable';
     const url = `/cmdb/feature-packs/${packName}/${action}/`;
     
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+    
     fetch(url, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-CSRFToken': csrfToken,
             'Content-Type': 'application/json',
         },
     })
@@ -200,6 +202,21 @@ function togglePack(packName, enable) {
     .catch(error => {
         alert('Error: ' + error);
     });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 </script>
 

@@ -45,6 +45,11 @@ class CoreConfig(AppConfig):
             enabled_packs_from_db = None  # First run, enable all by default
 
         print(f"[DEBUG] Scanning filesystem for feature packs...")
+        
+        # Add feature_packs to path for imports (once, outside the loop)
+        if feature_packs_dir not in sys.path:
+            sys.path.insert(0, feature_packs_dir)
+        
         for pack_name in os.listdir(feature_packs_dir):
             pack_path = os.path.join(feature_packs_dir, pack_name)
             if os.path.isdir(pack_path):
@@ -122,9 +127,5 @@ class CoreConfig(AppConfig):
                         tab['pack_name'] = pack_name
                         settings.FEATURE_PACK_TABS.append(tab)
                         print(f"[DEBUG] Added tab: {tab.get('id', 'unknown')}")
-            
-                # Add feature_packs to path for imports
-                if feature_packs_dir not in sys.path:
-                    sys.path.insert(0, feature_packs_dir)
         
         print(f"[DEBUG] Feature pack loading complete")

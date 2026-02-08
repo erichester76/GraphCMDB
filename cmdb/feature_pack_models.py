@@ -6,7 +6,7 @@ from neomodel import (
     StructuredNode, StringProperty, JSONProperty, 
     DateTimeProperty, BooleanProperty, db
 )
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 import os
 
@@ -142,8 +142,8 @@ def sync_feature_pack_to_db(pack_name: str, pack_path: str,
     Returns:
         The created or updated FeaturePackNode
     """
-    # Get last modified time of the directory
-    last_modified = datetime.fromtimestamp(os.path.getmtime(pack_path))
+    # Get last modified time of the directory (use UTC timezone)
+    last_modified = datetime.fromtimestamp(os.path.getmtime(pack_path), tz=timezone.utc)
     
     # Get or create feature pack node
     display_name = config.get('name', pack_name) if config else pack_name
@@ -208,10 +208,16 @@ def should_sync_pack(pack_name: str, pack_path: str) -> bool:
         # Pack doesn't exist in DB, needs sync
         return True
     
-    # Check if filesystem is newer than DB
-    fs_mtime = datetime.fromtimestamp(os.path.getmtime(pack_path))
+    # Check if filesystem is newer than DB (use UTC timezone)
+    fs_mtime = datetime.fromtimestamp(os.path.getmtime(pack_path), tz=timezone.utc)
     
     if pack_node.last_modified is None:
         return True
     
-    return fs_mtime > pack_node.last_modified
+    # Ensure both datetimes are timezone-aware for comparison
+    db_mtime = pack_node.last_modified
+    if db_mtime.tzinfo is None:
+        # If DB time is naive, make it UTC-aware for comparison
+        db_mtime = db_mtime.replace(tzinfo=timezone.utc)
+    
+    return fs_mtime > db_mtime

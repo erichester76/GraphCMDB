@@ -39,6 +39,7 @@ def feature_pack_list(request):
             'packs': pack_info,
             'total_packs': len(pack_info),
             'enabled_packs': sum(1 for p in pack_info if p['enabled']),
+            'disabled_packs': sum(1 for p in pack_info if not p['enabled']),
         }
         
         return render(request, 'feature_packs/list.html', context)
@@ -48,6 +49,7 @@ def feature_pack_list(request):
             'packs': [],
             'total_packs': 0,
             'enabled_packs': 0,
+            'disabled_packs': 0,
         })
 
 
@@ -174,7 +176,7 @@ def feature_pack_status_api(request):
                 'name': pack.name,
                 'display_name': pack.display_name,
                 'enabled': pack.enabled,
-                'type_count': len(pack.types),
+                'type_count': len(pack.types or []),
             })
         
         return JsonResponse({
