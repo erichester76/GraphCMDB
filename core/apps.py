@@ -23,7 +23,6 @@ class CoreConfig(AppConfig):
             sync_feature_pack_to_db, 
             should_sync_pack,
             FeaturePackNode,
-            TypeDefinitionNode
         )
         
         feature_packs_dir = os.path.join(settings.BASE_DIR, 'feature_packs')
@@ -110,8 +109,8 @@ class CoreConfig(AppConfig):
                 # Register types
                 if types_data:
                     for label, metadata in types_data.items():
-                        TypeRegistry.register(label, metadata)
-                        print(f"[DEBUG] Registered type: {label}")
+                        TypeRegistry.register(label, metadata, pack_name=pack_name)
+                        print(f"[DEBUG] Registered type: {label} from pack: {pack_name}")
 
                 # Add template dir
                 template_dir = os.path.join(pack_path, 'templates')

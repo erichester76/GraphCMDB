@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load cmdb_extras %}
 
 {% block title %}{{ pack.display_name }} - Feature Packs{% endblock %}
 
@@ -110,7 +111,7 @@
                             <div class="mt-1 flex flex-wrap gap-1">
                                 {% for prop in type.metadata.properties %}
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                                    {{ prop }}
+                                    {{ prop|property_display }}
                                 </span>
                                 {% endfor %}
                             </div>

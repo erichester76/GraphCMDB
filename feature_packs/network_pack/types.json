@@ -5,8 +5,8 @@
     "properties": [
       "name",
       "speed_mbps",
-      "duplex",
-      "status",
+      {"name": "duplex", "choices": ["full", "half", "auto"]},
+      {"name": "status", "choices": ["active", "decommissioned", "staged", "maintenance"]},
       "description"
     ],
     "required": [
@@ -29,10 +29,10 @@
     "display_name": "Network Cable",
     "category": "Networking",
     "properties": [
-      "type",
+      {"name": "type", "choices": ["Cat5e", "Cat6", "Cat6a", "Fiber", "Coax"]},
       "length_meters",
       "color",
-      "status"
+      {"name": "status", "choices": ["active", "decommissioned", "staged", "maintenance"]}
     ],
     "required": [
       "type"
@@ -56,8 +56,8 @@
       "name",
       "circuit_id",
       "bandwidth_mbps",
-      "type",
-      "status"
+      {"name": "type", "choices": ["MPLS", "Internet", "P2P", "VPN"]},
+      {"name": "status", "choices": ["active", "decommissioned", "staged", "maintenance"]}
     ],
     "required": [
       "name",
@@ -88,7 +88,7 @@
       "vlan_id",
       "name",
       "description",
-      "status"
+      {"name": "status", "choices": ["active", "decommissioned", "staged", "maintenance"]}
     ],
     "required": [
       "vlan_id",

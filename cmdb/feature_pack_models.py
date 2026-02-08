@@ -72,59 +72,20 @@ class FeaturePackNode(StructuredNode):
         self.save()
 
 
+# TypeDefinitionNode is deprecated - type metadata is now stored only in TypeRegistry
+# This class is kept for backward compatibility but is no longer used
+"""
 class TypeDefinitionNode(StructuredNode):
-    """
-    Represents a type definition from a feature pack's types.json.
-    
-    Attributes:
-        label: The type label (e.g., 'Issue', 'Server')
-        feature_pack_name: Name of the feature pack that provides this type
-        metadata: Full type metadata (properties, relationships, etc.)
-        enabled: Whether this type is active (inherits from feature pack)
-        last_synced: Last time this was synced to GraphDB
-    """
+    '''
+    DEPRECATED: Type definitions are now managed through TypeRegistry.
+    This class is kept for reference but should not be used.
+    '''
     label = StringProperty(unique_index=True, required=True)
     feature_pack_name = StringProperty(required=True)
     metadata = JSONProperty(default=dict)
     enabled = BooleanProperty(default=True)
     last_synced = DateTimeProperty(default_now=True)
-    
-    @classmethod
-    def get_or_create_type(cls, label: str, feature_pack_name: str, 
-                          metadata: Dict[str, Any]) -> 'TypeDefinitionNode':
-        """Get existing type definition or create a new one."""
-        existing = cls.nodes.get_or_none(label=label)
-        if existing:
-            # Update metadata
-            existing.feature_pack_name = feature_pack_name
-            existing.metadata = metadata
-            existing.last_synced = datetime.now()
-            existing.save()
-            return existing
-        else:
-            # Create new
-            type_def = cls(
-                label=label,
-                feature_pack_name=feature_pack_name,
-                metadata=metadata
-            )
-            type_def.save()
-            return type_def
-    
-    @classmethod
-    def get_all_types(cls) -> List['TypeDefinitionNode']:
-        """Get all type definitions from GraphDB."""
-        return list(cls.nodes.all())
-    
-    @classmethod
-    def get_enabled_types(cls) -> List['TypeDefinitionNode']:
-        """Get only enabled type definitions."""
-        return list(cls.nodes.filter(enabled=True))
-    
-    @classmethod
-    def get_types_for_pack(cls, feature_pack_name: str) -> List['TypeDefinitionNode']:
-        """Get all type definitions for a specific feature pack."""
-        return list(cls.nodes.filter(feature_pack_name=feature_pack_name))
+"""
 
 
 def sync_feature_pack_to_db(pack_name: str, pack_path: str, 
@@ -137,7 +98,7 @@ def sync_feature_pack_to_db(pack_name: str, pack_path: str,
         pack_name: Name of the feature pack
         pack_path: Filesystem path to the pack
         config: Configuration from config.py (FEATURE_PACK_CONFIG)
-        types_data: Type definitions from types.json
+        types_data: Type definitions from types.json (stored for reference, not used for queries)
     
     Returns:
         The created or updated FeaturePackNode
@@ -156,15 +117,6 @@ def sync_feature_pack_to_db(pack_name: str, pack_path: str,
         config=config or {},
         types=list(types_data.keys()) if types_data else []
     )
-    
-    # Sync type definitions
-    if types_data:
-        for label, metadata in types_data.items():
-            TypeDefinitionNode.get_or_create_type(
-                label=label,
-                feature_pack_name=pack_name,
-                metadata=metadata
-            )
     
     return pack_node
 
