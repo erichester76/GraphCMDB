@@ -512,13 +512,21 @@ def node_edit(request, label, element_id):
         # Create audit log entry
         node_name = current.get('name', '')
         changed_keys = [k for k in new_props.keys() if old_props.get(k) != new_props.get(k)]
+        
+        # Capture old and new values for changed properties
+        # Only include keys that existed in old_props (modified properties)
+        old_values = {k: old_props.get(k) for k in changed_keys if k in old_props}
+        new_values = {k: new_props.get(k) for k in changed_keys if k in old_props}
+        
         create_audit_entry(
             action='update',
             node_label=label,
             node_id=element_id,
             node_name=node_name,
             user=request.user.username if request.user.is_authenticated else 'System',
-            changes=f"Updated properties: {', '.join(changed_keys)}" if changed_keys else "Properties updated"
+            changes=f"Updated properties: {', '.join(changed_keys)}" if changed_keys else "Properties updated",
+            old_values=old_values,
+            new_values=new_values
         )
 
         return render(request, 'cmdb/partials/edit_success.html', {
@@ -863,6 +871,76 @@ def node_disconnect(request, label, element_id):
             'label': label,
             'error_message': str(e)
         })
+
+@require_http_methods(["POST"])
+def node_revert(request, label, element_id):
+    """
+    Revert properties to their previous values based on an audit log entry.
+    """
+    try:
+        audit_entry_id = request.POST.get('audit_entry_id', '').strip()
+        if not audit_entry_id:
+            raise ValueError("Cannot revert: No audit entry specified")
+        
+        # Get the audit log entry
+        audit_node_class = DynamicNode.get_or_create_label('AuditLogEntry')
+        audit_entry = audit_node_class.get_by_element_id(audit_entry_id)
+        if not audit_entry:
+            raise ValueError("Audit log entry not found")
+        
+        audit_props = audit_entry.custom_properties or {}
+        old_values = audit_props.get('old_values', {})
+        
+        if not old_values:
+            raise ValueError("Cannot revert: This audit entry does not contain previous property values")
+        
+        # Get the node to update
+        node_class = DynamicNode.get_or_create_label(label)
+        node = node_class.get_by_element_id(element_id)
+        if not node:
+            raise ValueError("Node not found")
+        
+        # Store current values for audit log
+        current_props = node.custom_properties or {}
+        # Only include keys that exist in current_props
+        new_values_for_audit = {k: current_props.get(k) for k in old_values.keys() if k in current_props}
+        
+        # Update node with old values
+        current_props.update(old_values)
+        node.custom_properties = current_props
+        node.save()
+        
+        # Create audit log entry for the revert
+        node_name = current_props.get('name', '')
+        create_audit_entry(
+            action='update',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'System',
+            changes=f"Reverted properties: {', '.join(old_values.keys())}",
+            old_values=new_values_for_audit,
+            new_values=old_values
+        )
+        
+        # Build properties list using helper function
+        props_list = build_properties_list_with_relationships(node)
+        
+        return render(request, 'cmdb/partials/properties_section.html', {
+            'properties_list': props_list,
+            'element_id': element_id,
+            'label': label,
+            'success_message': 'Properties reverted successfully'
+        })
+        
+    except Exception as e:
+        # Return error in the properties section
+        return render(request, 'cmdb/partials/properties_section.html', {
+            'properties_list': [],
+            'element_id': element_id,
+            'label': label,
+            'error_message': str(e)
+        })
         
 @require_http_methods(["GET"])
 def get_target_nodes(request):
@@ -913,6 +991,8 @@ def audit_log_list(request):
                 'node_name': props.get('node_name', 'Unknown'),
                 'user': props.get('user', 'System'),
                 'changes': props.get('changes', ''),
+                'old_values': props.get('old_values', {}),
+                'new_values': props.get('new_values', {}),
                 'relationship_type': props.get('relationship_type', ''),
                 'target_label': props.get('target_label', ''),
                 'target_id': props.get('target_id', '')

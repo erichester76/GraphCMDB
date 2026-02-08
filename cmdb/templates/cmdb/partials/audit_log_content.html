@@ -1,3 +1,4 @@
+{% load cmdb_extras %}
 <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
     <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">System Audit Log</h2>
@@ -55,7 +56,18 @@
                                 {% if entry.action == 'create' %}
                                     Node created
                                 {% elif entry.action == 'update' %}
-                                    {% if entry.changes %}
+                                    {% if entry.old_values and entry.new_values %}
+                                        <div class="space-y-1">
+                                            {% for key, old_val in entry.old_values.items %}
+                                                <div class="flex items-start space-x-2">
+                                                    <span class="font-semibold">{{ key }}:</span>
+                                                    <span class="text-red-600 dark:text-red-400 line-through">{{ old_val }}</span>
+                                                    <span>→</span>
+                                                    <span class="text-green-600 dark:text-green-400">{{ entry.new_values|get_item:key|default:'' }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% elif entry.changes %}
                                         {{ entry.changes }}
                                     {% else %}
                                         Properties updated

@@ -27,6 +27,7 @@ urlpatterns = [
     path('<str:label>/<str:element_id>/', views.node_detail, name='node_detail'),
     path('<str:label>/<str:element_id>/edit/', views.node_edit, name='node_edit'),
     path('<str:label>/<str:element_id>/delete/', views.node_delete, name='node_delete'),
+    path('<str:label>/<str:element_id>/revert/', views.node_revert, name='node_revert'),
     path('<str:label>/<str:element_id>/connect/', views.node_connect, name='node_connect'),
     path('<str:label>/<str:element_id>/disconnect/', views.node_disconnect, name='node_disconnect'),
     path('<str:label>/<str:element_id>/add-relationship-form/', views.node_add_relationship_form, name='node_add_relationship_form'),
