@@ -1,5 +1,5 @@
 {% load cmdb_extras %}
-<div x-data="paginationManager({{ page }}, {{ per_page }}, {{ total_count }}, {{ total_pages }}, '{{ label }}')">
+<div x-data="paginationManager({{ page }}, {{ per_page }}, {{ total_count }}, {{ total_pages }}, '{{ label|escapejs }}')">>
 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700" 
        x-data="{ 
            sortColumn: null,
@@ -225,7 +225,7 @@ function paginationManager(initialPage, initialPerPage, initialTotalCount, initi
         },
         
         goToPage(page) {
-            if (page < 1 || page > this.totalPages || page === this.currentPage) return;
+            if (page < 1 || page > this.totalPages || page === this.currentPage || this.totalPages === 0) return;
             
             // Use HTMX to fetch the new page
             const url = `/cmdb/nodes/${this.label}/?page=${page}&per_page=${this.perPage}`;

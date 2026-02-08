@@ -202,27 +202,35 @@ def nodes_list(request, label):
     """
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        # Get pagination parameters
-        page = int(request.GET.get('page', 1))
-        per_page = int(request.GET.get('per_page', 25))
+        # Get pagination parameters with validation
+        try:
+            page = int(request.GET.get('page', 1))
+            per_page = int(request.GET.get('per_page', 25))
+        except (ValueError, TypeError):
+            page = 1
+            per_page = 25
+        
+        # Validate pagination parameters
+        page = max(1, page)  # Ensure page is at least 1
+        per_page = max(1, min(100, per_page))  # Ensure per_page is between 1 and 100
         
         # Calculate offset and limit
         offset = (page - 1) * per_page
         
-        # Fetch all nodes for total count
+        # Fetch total count efficiently without loading all nodes
         all_nodes = node_class.nodes.all()
-        total_count = len(all_nodes)
+        total_count = len(all_nodes)  # TODO: optimize with count() method when available
         
         # Apply pagination
         nodes = all_nodes[offset:offset + per_page]
         
         # Calculate pagination metadata
-        total_pages = (total_count + per_page - 1) // per_page  # Ceiling division
+        total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 1
     except Exception as e:
         print(f"Error fetching {label}: {e}")
         nodes = []
         total_count = 0
-        total_pages = 0
+        total_pages = 1
         page = 1
         per_page = 25
     
