@@ -57,10 +57,12 @@
             </td>
             {% endfor %}
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                {% if can_user 'view' label %}
+                {% user_can 'view' label as can_view_node %}
+                {% if can_view_node %}
                 <a href="{% url 'cmdb:node_detail' label node.element_id %}" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 mr-3">Detail</a>
                 {% endif %}
-                {% if can_user 'delete' label %}
+                {% user_can 'delete' label as can_delete_node %}
+                {% if can_delete_node %}
                 <button 
                     hx-post="{% url 'cmdb:node_delete' label node.element_id %}"  
                     hx-confirm="Delete this node? This action cannot be undone."

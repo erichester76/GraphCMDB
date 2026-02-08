@@ -29,3 +29,23 @@ def get_item(dictionary, key):
     if dictionary is None:
         return None
     return dictionary.get(key)
+
+@register.simple_tag(takes_context=True)
+def user_can(context, action, label=None):
+    """
+    Template tag to check if user has permission for an action on a node type.
+    
+    Usage:
+        {% user_can 'view' 'Device' as can_view %}
+        {% if can_view %}...{% endif %}
+        
+        Or directly in if:
+        {% user_can 'add' label as can_add %}
+    """
+    from users.views import has_node_permission
+    
+    request = context.get('request')
+    if not request or not request.user.is_authenticated:
+        return False
+    
+    return has_node_permission(request.user, action, label)
