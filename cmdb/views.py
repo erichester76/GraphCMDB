@@ -26,6 +26,23 @@ except ImportError:
     def create_audit_entry(*args, **kwargs):
         pass
 
+def parse_property_definition(prop_def):
+    """
+    Parse a property definition which can be either:
+    - A string: "property_name"
+    - A dict: {"name": "property_name", "choices": ["choice1", "choice2"]}
+    
+    Returns a dict with keys: name, choices (list or None)
+    """
+    if isinstance(prop_def, str):
+        return {'name': prop_def, 'choices': None}
+    elif isinstance(prop_def, dict):
+        return {
+            'name': prop_def.get('name', ''),
+            'choices': prop_def.get('choices', None)
+        }
+    return {'name': '', 'choices': None}
+
 def build_properties_list_with_relationships(node):
     """
     Helper function to build a properties list that includes both regular properties
@@ -397,22 +414,45 @@ def node_edit(request, label, element_id):
     if request.method == 'GET':
         current_props = node.custom_properties or {}
         
+        # Get metadata to check for property definitions with choices
+        meta = TypeRegistry.get_metadata(label)
+        props_metadata = meta.get('properties', [])
+        
+        # Build a map of property names to their definitions
+        prop_choices_map = {}
+        for prop_def in props_metadata:
+            parsed_prop = parse_property_definition(prop_def)
+            if parsed_prop['choices']:
+                prop_choices_map[parsed_prop['name']] = parsed_prop['choices']
+        
         # Build list of form fields
         form_fields = []
         for key, value in current_props.items():
             field_type = 'text'
-            if isinstance(value, bool):
+            choices = None
+            
+            # Check if this property has predefined choices
+            if key in prop_choices_map:
+                field_type = 'select'
+                choices = prop_choices_map[key]
+            elif isinstance(value, bool):
                 field_type = 'checkbox'
             elif isinstance(value, (int, float)):
                 field_type = 'number'
             elif isinstance(value, list):
                 field_type = 'textarea'  # comma-separated
-            form_fields.append({
+            
+            field_data = {
                 'key': key,
                 'value': value,
                 'type': field_type,
                 'input_name': f'prop_{key}',  # for POST collection
-            })
+            }
+            
+            if choices:
+                field_data['choices'] = choices
+            
+            form_fields.append(field_data)
 
         context['form_fields'] = form_fields
         context['current_json'] = json.dumps(current_props, indent=2)  # fallback raw
@@ -603,14 +643,23 @@ def node_create(request, label):
 
             form_fields = []
             
-            for key in props:
-                form_fields.append({
-                    'key': key,
+            for prop_def in props:
+                parsed_prop = parse_property_definition(prop_def)
+                prop_name = parsed_prop['name']
+                choices = parsed_prop['choices']
+                
+                field_data = {
+                    'key': prop_name,
                     'value': '',
-                    'type': 'text',
-                    'input_name': f'prop_{key}',
-                    'required': key in required_props,
-                })
+                    'type': 'select' if choices else 'text',
+                    'input_name': f'prop_{prop_name}',
+                    'required': prop_name in required_props,
+                }
+                
+                if choices:
+                    field_data['choices'] = choices
+                
+                form_fields.append(field_data)
             
             context = {
                 'label': label,

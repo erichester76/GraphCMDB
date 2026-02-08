@@ -5,15 +5,15 @@
     "properties": [
       "name",
       "description",
-      "priority",
-      "status",
+      {"name": "priority", "choices": ["low", "medium", "high", "critical"]},
+      {"name": "status", "choices": ["open", "in_progress", "resolved", "closed"]},
       "assignee",
       "reporter",
       "created_date",
       "resolved_date",
       "category",
-      "impact",
-      "urgency"
+      {"name": "impact", "choices": ["low", "medium", "high", "critical"]},
+      {"name": "urgency", "choices": ["low", "medium", "high", "critical"]}
     ],
     "required": [
       "name",
@@ -45,15 +45,15 @@
     "properties": [
       "name",
       "description",
-      "priority",
-      "status",
+      {"name": "priority", "choices": ["low", "medium", "high", "critical"]},
+      {"name": "status", "choices": ["open", "investigating", "resolved", "closed"]},
       "assignee",
       "created_date",
       "resolved_date",
       "root_cause",
       "workaround",
       "category",
-      "impact"
+      {"name": "impact", "choices": ["low", "medium", "high", "critical"]}
     ],
     "required": [
       "name",
@@ -85,16 +85,16 @@
     "properties": [
       "name",
       "description",
-      "priority",
-      "status",
+      {"name": "priority", "choices": ["low", "medium", "high", "critical"]},
+      {"name": "status", "choices": ["draft", "submitted", "approved", "scheduled", "in_progress", "completed", "cancelled"]},
       "assignee",
       "requester",
       "created_date",
       "scheduled_date",
       "completed_date",
-      "change_type",
-      "risk_level",
-      "approval_status",
+      {"name": "change_type", "choices": ["standard", "normal", "emergency"]},
+      {"name": "risk_level", "choices": ["low", "medium", "high"]},
+      {"name": "approval_status", "choices": ["pending", "approved", "rejected"]},
       "rollback_plan",
       "impact_assessment"
     ],
@@ -130,12 +130,12 @@
       "name",
       "description",
       "version",
-      "status",
+      {"name": "status", "choices": ["planned", "in_development", "testing", "deployed", "cancelled"]},
       "release_manager",
       "created_date",
       "scheduled_date",
       "deployed_date",
-      "release_type",
+      {"name": "release_type", "choices": ["major", "minor", "patch", "hotfix"]},
       "release_notes",
       "rollback_plan"
     ],
@@ -165,8 +165,8 @@
     "properties": [
       "name",
       "description",
-      "severity",
-      "status",
+      {"name": "severity", "choices": ["informational", "warning", "error", "critical"]},
+      {"name": "status", "choices": ["new", "acknowledged", "investigating", "resolved", "closed"]},
       "timestamp",
       "source",
       "event_type",

@@ -24,7 +24,17 @@
                         {{ field.key }}
                         <span class="text-xs text-gray-500 dark:text-gray-400">({{ field.type }})</span>
                     </label>
-                    {% if field.type == 'checkbox' %}
+                    {% if field.type == 'select' %}
+                        <select 
+                            id="{{ field.input_name }}" 
+                            name="{{ field.input_name }}"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <option value="">-- Select {{ field.key }} --</option>
+                            {% for choice in field.choices %}
+                                <option value="{{ choice }}" {% if field.value == choice %}selected{% endif %}>{{ choice }}</option>
+                            {% endfor %}
+                        </select>
+                    {% elif field.type == 'checkbox' %}
                         <input type="checkbox" 
                                id="{{ field.input_name }}" 
                                name="{{ field.input_name }}"
