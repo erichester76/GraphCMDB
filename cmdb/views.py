@@ -198,14 +198,33 @@ def dashboard(request):
 def nodes_list(request, label):
     """
     List view for nodes of a specific label
-    Supports HTMX partial updates
+    Supports HTMX partial updates with pagination
     """
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        nodes = node_class.nodes.all()[:50]  # limit for MVP
+        # Get pagination parameters
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 25))
+        
+        # Calculate offset and limit
+        offset = (page - 1) * per_page
+        
+        # Fetch all nodes for total count
+        all_nodes = node_class.nodes.all()
+        total_count = len(all_nodes)
+        
+        # Apply pagination
+        nodes = all_nodes[offset:offset + per_page]
+        
+        # Calculate pagination metadata
+        total_pages = (total_count + per_page - 1) // per_page  # Ceiling division
     except Exception as e:
         print(f"Error fetching {label}: {e}")
         nodes = []
+        total_count = 0
+        total_pages = 0
+        page = 1
+        per_page = 25
     
     # Get column configuration from type registry
     metadata = TypeRegistry.get_metadata(label)
@@ -268,6 +287,10 @@ def nodes_list(request, label):
         'all_properties': all_properties_with_rels,
         'all_properties_json': json.dumps(all_properties_with_rels),
         'all_labels': TypeRegistry.known_labels(),
+        'page': page,
+        'per_page': per_page,
+        'total_count': total_count,
+        'total_pages': total_pages,
     }
 
     # If request is from HTMX, return content + header for OOB swap
