@@ -54,6 +54,8 @@ class CoreConfig(AppConfig):
                         settings.FEATURE_PACK_TABS = []
                     for tab in config_module.FEATURE_PACK_CONFIG['tabs']:
                         tab['pack_name'] = pack_name
+                        # Store original for_labels for dynamic expansion
+                        tab['original_for_labels'] = tab.get('for_labels', [])
                         settings.FEATURE_PACK_TABS.append(tab)
                         print(f"[DEBUG] Added tab: {tab}")
             

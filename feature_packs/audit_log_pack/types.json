@@ -1,0 +1,33 @@
+{
+    "AuditLogEntry": {
+        "display_name": "Audit Log Entry",
+        "description": "Tracks changes to nodes and relationships in the CMDB",
+        "category": "System",
+        "properties": [
+            "timestamp",
+            "action",
+            "node_label",
+            "node_id",
+            "node_name",
+            "user",
+            "changes",
+            "relationship_type",
+            "target_label",
+            "target_id"
+        ],
+        "required": [
+            "timestamp",
+            "action",
+            "node_label",
+            "node_id"
+        ],
+        "columns": [
+            "timestamp",
+            "action",
+            "node_label",
+            "node_name",
+            "user"
+        ],
+        "relationships": {}
+    }
+}

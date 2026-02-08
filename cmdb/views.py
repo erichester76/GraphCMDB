@@ -12,6 +12,21 @@ from django.template import Context, Template
 from django.conf import settings
 import importlib
 
+# Import audit log utility if available
+try:
+    import sys
+    import os
+    # Add feature_packs to sys.path if not already there
+    feature_packs_path = os.path.join(settings.BASE_DIR, 'feature_packs')
+    if feature_packs_path not in sys.path:
+        sys.path.insert(0, feature_packs_path)
+    from audit_log_pack.views import create_audit_entry
+except ImportError:
+    # If audit log pack is not available, use a no-op function
+    def create_audit_entry(*args, **kwargs):
+        pass
+
+
 @require_http_methods(["GET", "POST"])
 def type_register(request):
     if request.method == 'GET':
@@ -240,7 +255,10 @@ def node_detail(request, label, element_id):
 
         feature_pack_tabs = []
         for tab in getattr(settings, 'FEATURE_PACK_TABS', []):
-            if label in tab.get('for_labels', []):
+            # Check if tab applies to this label
+            # Empty for_labels means apply to all labels
+            tab_for_labels = tab.get('for_labels', [])
+            if not tab_for_labels or label in tab_for_labels:
                 tab_copy = tab.copy()
                 # Set default tab_order if not specified
                 # Tab ordering: 0 = first (before Core Details), 1 = Core Details, 2+ = after Core Details
@@ -371,9 +389,22 @@ def node_edit(request, label, element_id):
 
         # Merge with existing
         current = node.custom_properties or {}
+        old_props = current.copy()
         current.update(new_props)
         node.custom_properties = current
         node.save()
+
+        # Create audit log entry
+        node_name = current.get('name', '')
+        changed_keys = [k for k in new_props.keys() if old_props.get(k) != new_props.get(k)]
+        create_audit_entry(
+            action='update',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'Anonymous',
+            changes=f"Updated properties: {', '.join(changed_keys)}" if changed_keys else "Properties updated"
+        )
 
         return render(request, 'cmdb/partials/edit_success.html', {
             'message': 'Node updated successfully'
@@ -399,6 +430,19 @@ def node_delete(request, label, element_id):
         node = node_class.get_by_element_id(element_id)
         if not node:
             return JsonResponse({'error': 'Node not found'}, status=404)
+
+        # Store node info before deleting for audit log
+        node_name = (node.custom_properties or {}).get('name', '')
+        
+        # Create audit log entry before deletion
+        create_audit_entry(
+            action='delete',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'Anonymous',
+            changes='Node deleted'
+        )
 
         node.delete()
 
@@ -536,6 +580,17 @@ def node_create(request, label):
             node_class = DynamicNode.get_or_create_label(label)
             node = node_class(custom_properties=new_props).save()  
 
+            # Create audit log entry
+            node_name = new_props.get('name', '')
+            create_audit_entry(
+                action='create',
+                node_label=label,
+                node_id=node.element_id,
+                node_name=node_name,
+                user=request.user.username if request.user.is_authenticated else 'Anonymous',
+                changes=f"Created with properties: {', '.join(new_props.keys())}"
+            )
+
             # Success
             return render(request, 'cmdb/partials/create_success.html', {
                 'message': f"{label} created with ID {node.element_id}"
@@ -573,6 +628,19 @@ def node_connect(request, label, element_id):
         node = node_class.get_by_element_id(element_id)
         if not node:
             raise ValueError("Source node not found")
+        
+        # Create audit log entry
+        node_name = (node.custom_properties or {}).get('name', '')
+        create_audit_entry(
+            action='connect',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'Anonymous',
+            relationship_type=rel_type,
+            target_label=target_label,
+            target_id=target_id
+        )
             
         out_rels = node.get_outgoing_relationships()
         in_rels = node.get_incoming_relationships()
@@ -613,6 +681,19 @@ def node_disconnect(request, label, element_id):
         node = node_class.get_by_element_id(element_id)
         if not node:
             raise ValueError("Source node not found")
+        
+        # Create audit log entry
+        node_name = (node.custom_properties or {}).get('name', '')
+        create_audit_entry(
+            action='disconnect',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'Anonymous',
+            relationship_type=rel_type,
+            target_label=target_label,
+            target_id=target_id
+        )
             
         out_rels = node.get_outgoing_relationships()
         in_rels = node.get_incoming_relationships()
