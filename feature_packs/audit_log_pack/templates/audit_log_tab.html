@@ -1,3 +1,4 @@
+{% load cmdb_extras %}
 <!-- Audit Log Tab Template -->
 <div class="space-y-4">
     <div class="flex justify-between items-center">
@@ -26,6 +27,9 @@
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             Details
                         </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Actions
+                        </th>
                     </tr>
                 </thead>
                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -52,7 +56,18 @@
                                 {% if entry.action == 'create' %}
                                     Node created
                                 {% elif entry.action == 'update' %}
-                                    {% if entry.changes %}
+                                    {% if entry.old_values and entry.new_values %}
+                                        <div class="space-y-1">
+                                            {% for key, old_val in entry.old_values.items %}
+                                                <div class="flex items-start space-x-2">
+                                                    <span class="font-semibold">{{ key }}:</span>
+                                                    <span class="text-red-600 dark:text-red-400 line-through">{{ old_val }}</span>
+                                                    <span>→</span>
+                                                    <span class="text-green-600 dark:text-green-400">{{ entry.new_values|get_item:key|default:'' }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% elif entry.changes %}
                                         {{ entry.changes }}
                                     {% else %}
                                         Properties updated
@@ -63,6 +78,22 @@
                                     Connected via {{ entry.relationship_type }} to {{ entry.target_label }}
                                 {% elif entry.action == 'disconnect' %}
                                     Disconnected {{ entry.relationship_type }} from {{ entry.target_label }}
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {% if entry.action == 'update' and entry.old_values %}
+                                    <button
+                                        hx-post="/cmdb/nodes/{{ label }}/{{ element_id }}/revert/"
+                                        hx-vals='{"audit_entry_id": "{{ entry.id }}"}'
+                                        hx-target="#properties-section"
+                                        hx-swap="outerHTML"
+                                        class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                        onclick="return confirm('Are you sure you want to revert these changes?');">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                        </svg>
+                                        Revert
+                                    </button>
                                 {% endif %}
                             </td>
                         </tr>

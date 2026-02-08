@@ -39,6 +39,8 @@ def audit_log_tab(request, label, element_id):
                     'node_name': props.get('node_name', 'Unknown'),
                     'user': props.get('user', 'System'),
                     'changes': props.get('changes', ''),
+                    'old_values': props.get('old_values', {}),
+                    'new_values': props.get('new_values', {}),
                     'relationship_type': props.get('relationship_type', ''),
                     'target_label': props.get('target_label', ''),
                     'target_id': props.get('target_id', '')
@@ -55,7 +57,7 @@ def audit_log_tab(request, label, element_id):
 
 
 def create_audit_entry(action, node_label, node_id, node_name=None, user=None, changes=None, 
-                       relationship_type=None, target_label=None, target_id=None):
+                       old_values=None, new_values=None, relationship_type=None, target_label=None, target_id=None):
     """
     Utility function to create an audit log entry.
     
@@ -66,6 +68,8 @@ def create_audit_entry(action, node_label, node_id, node_name=None, user=None, c
         node_name: Name of the node (optional)
         user: User performing the action (optional)
         changes: Description of changes (optional)
+        old_values: Dictionary of old property values for update actions (optional)
+        new_values: Dictionary of new property values for update actions (optional)
         relationship_type: For relationship actions (optional)
         target_label: For relationship actions (optional)
         target_id: For relationship actions (optional)
@@ -81,6 +85,8 @@ def create_audit_entry(action, node_label, node_id, node_name=None, user=None, c
             'node_name': node_name or '',
             'user': user or 'System',
             'changes': changes or '',
+            'old_values': old_values or {},
+            'new_values': new_values or {},
             'relationship_type': relationship_type or '',
             'target_label': target_label or '',
             'target_id': target_id or ''

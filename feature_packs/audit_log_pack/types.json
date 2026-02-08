@@ -11,6 +11,8 @@
             "node_name",
             "user",
             "changes",
+            "old_values",
+            "new_values",
             "relationship_type",
             "target_label",
             "target_id"
