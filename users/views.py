@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User, Group, Permission
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from functools import wraps
 from cmdb.models import DynamicNode
 from neomodel import db
@@ -127,9 +127,23 @@ def node_permission_required(action, label_param='label'):
                 }.get(action, action)
                 
                 if label:
-                    messages.error(request, f'Access Denied: You do not have permission to {action_name} {label} nodes.')
+                    error_msg = f'Access Denied: You do not have permission to {action_name} {label} nodes.'
                 else:
-                    messages.error(request, f'Access Denied: You do not have permission to perform this action.')
+                    error_msg = f'Access Denied: You do not have permission to perform this action.'
+                
+                # Handle HTMX requests differently - return error HTML for modal display
+                if request.htmx or request.headers.get('HX-Request'):
+                    from django.template.loader import render_to_string
+                    
+                    error_html = render_to_string('partials/permission_error.html', {
+                        'error_message': error_msg,
+                        'action': action_name,
+                        'label': label,
+                    })
+                    return HttpResponse(error_html)
+                
+                # For regular requests, set message and redirect
+                messages.error(request, error_msg)
                 
                 # Try to redirect to a more contextual page
                 referer = request.META.get('HTTP_REFERER')
