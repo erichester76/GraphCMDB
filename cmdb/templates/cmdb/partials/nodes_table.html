@@ -1,16 +1,18 @@
 {% load cmdb_extras %}
 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700" 
        x-data="{ 
+           sortColumn: null,
+           sortDirection: 'asc',
            getSortIcon(col) { 
-               const manager = this.$el.closest('[x-data*=listViewManager]')?.__x?.$data;
-               if (!manager || manager.sortColumn !== col) return '';
-               return manager.sortDirection === 'asc' ? '↑' : '↓';
+               if (this.sortColumn !== col) return '';
+               return this.sortDirection === 'asc' ? '↑' : '↓';
            }
-       }">
+       }"
+       @sort-updated.window="sortColumn = $event.detail.column; sortDirection = $event.detail.direction">
     <thead class="bg-gray-50 dark:bg-gray-700">
         <tr>
             <th scope="col" 
-                @click="$el.closest('[x-data*=listViewManager]').__x.$data.sortById()"
+                @click="$dispatch('sort-column', { column: 'id' })"
                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none">
                 <span class="flex items-center gap-2">
                     ID
@@ -20,7 +22,7 @@
             </th>
             {% for property in all_properties %}
             <th scope="col" 
-                @click="$el.closest('[x-data*=listViewManager]').__x.$data.sortBy('{{ property }}')"
+                @click="$dispatch('sort-column', { column: '{{ property }}' })"
                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider column-{{ property }} cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                 data-column="{{ property }}"
                 style="{% if property not in columns %}display: none;{% endif %}">

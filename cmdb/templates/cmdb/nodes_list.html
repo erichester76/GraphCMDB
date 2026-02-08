@@ -161,6 +161,11 @@ function listViewManager(label, defaultColumns, allProperties) {
             this.$nextTick(() => {
                 this.applyColumnVisibility();
             });
+            
+            // Listen for sort events from table
+            this.$el.addEventListener('sort-column', (e) => {
+                this.sortBy(e.detail.column);
+            });
         },
         
         initFromStorage() {
@@ -237,18 +242,11 @@ function listViewManager(label, defaultColumns, allProperties) {
             }
             
             this.applySorting();
-        },
-        
-        sortById() {
-            // Toggle direction if clicking the same column
-            if (this.sortColumn === 'id') {
-                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                this.sortColumn = 'id';
-                this.sortDirection = 'asc';
-            }
             
-            this.applySorting();
+            // Dispatch event to update table indicators
+            window.dispatchEvent(new CustomEvent('sort-updated', {
+                detail: { column: this.sortColumn, direction: this.sortDirection }
+            }));
         },
         
         applySorting() {
