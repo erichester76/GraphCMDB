@@ -19,40 +19,32 @@ def audit_log_tab(request, label, element_id):
     }
 
     try:
-        # Fetch audit log entries related to this node
-        query = """
-            MATCH (log:AuditLogEntry)
-            WHERE apoc.convert.fromJsonMap(log.custom_properties).node_id = $eid
-            WITH log, apoc.convert.fromJsonMap(log.custom_properties) AS props
-            RETURN 
-                elementId(log) AS id,
-                props.timestamp AS timestamp,
-                props.action AS action,
-                props.node_label AS node_label,
-                props.node_name AS node_name,
-                props.user AS user,
-                props.changes AS changes,
-                props.relationship_type AS relationship_type,
-                props.target_label AS target_label,
-                props.target_id AS target_id
-            ORDER BY props.timestamp DESC
-            LIMIT 100
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
+        # Fetch all audit log entries using neomodel (same as global view)
+        audit_node_class = DynamicNode.get_or_create_label('AuditLogEntry')
+        all_audit_nodes = audit_node_class.nodes.all()
         
-        for row in result:
-            context['audit_entries'].append({
-                'id': row[0],
-                'timestamp': row[1],
-                'action': row[2],
-                'node_label': row[3],
-                'node_name': row[4] or 'Unknown',
-                'user': row[5] or 'System',
-                'changes': row[6],
-                'relationship_type': row[7],
-                'target_label': row[8],
-                'target_id': row[9]
-            })
+        # Filter to only entries for this specific node and extract properties
+        audit_entries = []
+        for node in all_audit_nodes:
+            props = node.custom_properties or {}
+            # Filter by node_id matching the element_id
+            if props.get('node_id') == element_id:
+                audit_entries.append({
+                    'id': node.element_id,
+                    'timestamp': props.get('timestamp', ''),
+                    'action': props.get('action', ''),
+                    'node_label': props.get('node_label', ''),
+                    'node_name': props.get('node_name', 'Unknown'),
+                    'user': props.get('user', 'System'),
+                    'changes': props.get('changes', ''),
+                    'relationship_type': props.get('relationship_type', ''),
+                    'target_label': props.get('target_label', ''),
+                    'target_id': props.get('target_id', '')
+                })
+        
+        # Sort by timestamp descending (most recent first) and limit to 100
+        audit_entries.sort(key=lambda x: x['timestamp'], reverse=True)
+        context['audit_entries'] = audit_entries[:100]
 
     except Exception as e:
         context['error'] = str(e)
