@@ -239,14 +239,16 @@ function listViewManager(label, defaultColumns, allProperties) {
             
             this.applySorting();
             
-            // Dispatch event to update table indicators
-            window.dispatchEvent(new CustomEvent('sort-updated', {
-                detail: { column: this.sortColumn, direction: this.sortDirection }
-            }));
+            // Dispatch event to update table indicators using Alpine's $dispatch
+            this.$dispatch('sort-updated', {
+                column: this.sortColumn, 
+                direction: this.sortDirection
+            });
         },
         
         applySorting() {
-            const tbody = document.querySelector('tbody');
+            // Scope tbody to the nodes table to avoid conflicts with other tables
+            const tbody = document.querySelector('#nodes-content tbody');
             if (!tbody) return;
             
             const rows = Array.from(tbody.querySelectorAll('.node-row'));
