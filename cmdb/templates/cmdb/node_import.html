@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Import {{ label }} Nodes{% endblock %}
+
+{% block page_title %}Import {{ label }} Nodes{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-white">
+                Bulk Import {{ label }} Nodes
+            </h3>
+            <div class="mt-2 max-w-xl text-sm text-gray-500 dark:text-gray-400">
+                <p>Upload a CSV or Excel file to create multiple {{ label }} nodes at once.</p>
+            </div>
+
+            <!-- Success/Error Messages -->
+            {% if success %}
+            <div class="mt-4 p-4 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-md">
+                <h4 class="font-medium">Import Summary</h4>
+                <p class="mt-1">Successfully created {{ created_count }} node(s).</p>
+                {% if error_count > 0 %}
+                <p class="mt-1 text-yellow-700 dark:text-yellow-300">{{ error_count }} error(s) occurred during import.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if error %}
+            <div class="mt-4 p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            {% if errors %}
+            <div class="mt-4 p-4 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md max-h-64 overflow-y-auto">
+                <h4 class="font-medium mb-2">Import Errors:</h4>
+                <ul class="list-disc list-inside space-y-1">
+                    {% for err in errors %}
+                    <li class="text-sm">{{ err }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Template Download Section -->
+            <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900 rounded-md">
+                <h4 class="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">
+                    <svg class="inline-block w-5 h-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Download Template
+                </h4>
+                <p class="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                    Download a CSV template with the correct column headers for {{ label }} nodes.
+                </p>
+                <a href="?download_template=true" 
+                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800">
+                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Download Template CSV
+                </a>
+            </div>
+
+            <!-- Import Instructions -->
+            <div class="mt-6 p-4 border border-gray-200 dark:border-gray-700 rounded-md">
+                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Import Instructions</h4>
+                <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-2 list-disc list-inside">
+                    <li><strong>Required columns:</strong> 
+                        {% if required_props %}
+                            {{ required_props|join:", " }}
+                        {% else %}
+                            None
+                        {% endif %}
+                    </li>
+                    <li><strong>Optional columns:</strong> 
+                        {% if properties %}
+                            {{ properties|join:", " }}
+                        {% else %}
+                            None defined
+                        {% endif %}
+                    </li>
+                    {% if relationships %}
+                    <li><strong>Relationship columns:</strong> Add columns with suffix "_names" to create relationships (e.g., "BELONGS_TO_names"). Reference target nodes by their name property. Use comma-separated values for multiple relationships.
+                        <ul class="ml-6 mt-1 list-disc">
+                            {% for rel_type, rel_info in relationships.items %}
+                            <li>{{ rel_type }}_names → {{ rel_info.target_label }}</li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    {% endif %}
+                    <li>File format: CSV or Excel (.xlsx, .xls)</li>
+                    <li>First row must contain column headers</li>
+                    <li>Empty cells will be skipped</li>
+                </ul>
+            </div>
+
+            <!-- File Upload Form -->
+            <form method="post" enctype="multipart/form-data" class="mt-6">
+                {% csrf_token %}
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="import_file" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Upload File
+                        </label>
+                        <input type="file" 
+                               id="import_file" 
+                               name="import_file" 
+                               accept=".csv,.xlsx,.xls"
+                               required
+                               class="mt-1 block w-full text-sm text-gray-900 dark:text-gray-100 
+                                      border border-gray-300 dark:border-gray-600 
+                                      rounded-md cursor-pointer 
+                                      bg-gray-50 dark:bg-gray-700 
+                                      focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Supported formats: CSV, Excel (.xlsx, .xls)
+                        </p>
+                    </div>
+
+                    <div class="flex justify-end gap-3">
+                        <a href="{% url 'cmdb:nodes_list' label %}" 
+                           class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                            Cancel
+                        </a>
+                        <button type="submit" 
+                                class="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800">
+                            <svg class="inline-block w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Import Nodes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

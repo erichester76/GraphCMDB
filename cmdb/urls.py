@@ -23,6 +23,7 @@ urlpatterns = [
 
     path('<str:label>/', views.nodes_list, name='nodes_list'),
     path('<str:label>/create/', views.node_create, name='node_create'),
+    path('<str:label>/import/', views.node_import, name='node_import'),
     path('<str:label>/<str:element_id>/', views.node_detail, name='node_detail'),
     path('<str:label>/<str:element_id>/edit/', views.node_edit, name='node_edit'),
     path('<str:label>/<str:element_id>/delete/', views.node_delete, name='node_delete'),

@@ -882,3 +882,204 @@ def audit_log_list(request):
         return HttpResponse(content_html + header_html)
     
     return render(request, 'cmdb/audit_log_list.html', context)
+
+@require_http_methods(["GET", "POST"])
+def node_import(request, label):
+    """
+    Handle bulk node import from CSV/XLS files
+    GET: Display import form and download template
+    POST: Process uploaded file and create nodes
+    """
+    import pandas as pd
+    import io
+    
+    try:
+        meta = TypeRegistry.get_metadata(label)
+        if not meta:
+            raise ValueError(f"No metadata for label '{label}'")
+        
+        # Get properties and relationships from metadata
+        properties = meta.get('properties', [])
+        required_props = meta.get('required', [])
+        relationships = meta.get('relationships', {})
+        
+        context = {
+            'label': label,
+            'csrf_token': get_token(request),
+            'properties': properties,
+            'required_props': required_props,
+            'relationships': relationships,
+            'all_labels': TypeRegistry.known_labels(),
+        }
+        
+        if request.method == 'GET':
+            # Check if downloading template
+            if request.GET.get('download_template') == 'true':
+                # Create template CSV with headers
+                headers = properties.copy()
+                # Add relationship columns
+                for rel_type, rel_info in relationships.items():
+                    headers.append(f"{rel_type}_names")
+                
+                # Create DataFrame with headers only
+                df = pd.DataFrame(columns=headers)
+                
+                # Return as CSV download
+                response = HttpResponse(content_type='text/csv')
+                response['Content-Disposition'] = f'attachment; filename="{label}_import_template.csv"'
+                df.to_csv(response, index=False)
+                return response
+            
+            # Otherwise show the import form
+            return render(request, 'cmdb/node_import.html', context)
+        
+        # POST: Process file upload
+        if 'import_file' not in request.FILES:
+            context['error'] = 'No file uploaded'
+            return render(request, 'cmdb/node_import.html', context)
+        
+        uploaded_file = request.FILES['import_file']
+        file_ext = uploaded_file.name.split('.')[-1].lower()
+        
+        # Read file into DataFrame
+        try:
+            if file_ext == 'csv':
+                df = pd.read_csv(uploaded_file)
+            elif file_ext in ['xls', 'xlsx']:
+                df = pd.read_excel(uploaded_file)
+            else:
+                context['error'] = 'Unsupported file format. Please upload CSV or Excel file.'
+                return render(request, 'cmdb/node_import.html', context)
+        except Exception as e:
+            context['error'] = f'Error reading file: {str(e)}'
+            return render(request, 'cmdb/node_import.html', context)
+        
+        # Process each row
+        node_class = DynamicNode.get_or_create_label(label)
+        created_nodes = []
+        errors = []
+        relationship_queue = []  # Store relationships to create after all nodes
+        
+        for idx, row in df.iterrows():
+            try:
+                # Build properties dict from row
+                node_props = {}
+                row_relationships = {}
+                
+                for col in df.columns:
+                    value = row[col]
+                    
+                    # Skip NaN values
+                    if pd.isna(value):
+                        continue
+                    
+                    # Check if this is a relationship column
+                    if col.endswith('_names'):
+                        rel_type = col[:-6]  # Remove '_names' suffix
+                        if rel_type in relationships:
+                            # Store for later processing
+                            row_relationships[rel_type] = str(value)
+                        continue
+                    
+                    # Regular property
+                    if col in properties:
+                        # Type coercion
+                        if isinstance(value, (int, float, bool)):
+                            node_props[col] = value
+                        else:
+                            node_props[col] = str(value)
+                
+                # Validate required properties
+                missing = [r for r in required_props if r not in node_props or not node_props[r]]
+                if missing:
+                    errors.append(f"Row {idx + 2}: Missing required properties: {', '.join(missing)}")
+                    continue
+                
+                # Create node
+                node = node_class(custom_properties=node_props).save()
+                created_nodes.append(node)
+                
+                # Queue relationships for creation
+                if row_relationships:
+                    relationship_queue.append({
+                        'node': node,
+                        'relationships': row_relationships
+                    })
+                
+                # Create audit log entry
+                node_name = node_props.get('name', '')
+                create_audit_entry(
+                    action='create',
+                    node_label=label,
+                    node_id=node.element_id,
+                    node_name=node_name,
+                    user=request.user.username if request.user.is_authenticated else 'System',
+                    changes=f"Imported from file with properties: {', '.join(node_props.keys())}"
+                )
+                
+            except Exception as e:
+                errors.append(f"Row {idx + 2}: {str(e)}")
+        
+        # Process queued relationships
+        for item in relationship_queue:
+            node = item['node']
+            node_name = (node.custom_properties or {}).get('name', node.element_id)
+            
+            for rel_type, target_names in item['relationships'].items():
+                # Split multiple target names by comma
+                target_name_list = [name.strip() for name in target_names.split(',')]
+                
+                # Get target label from relationships metadata
+                rel_info = relationships.get(rel_type, {})
+                target_label = rel_info.get('target_label')
+                
+                if not target_label:
+                    errors.append(f"Node '{node_name}': Unknown relationship type '{rel_type}'")
+                    continue
+                
+                # Find target nodes by name
+                target_class = DynamicNode.get_or_create_label(target_label)
+                
+                for target_name in target_name_list:
+                    # Query for target node by name property
+                    query = f"""
+                        MATCH (n:`{target_label}`)
+                        WHERE n.custom_properties IS NOT NULL
+                        AND apoc.convert.fromJsonMap(n.custom_properties).name = $name
+                        RETURN elementId(n) AS eid
+                        LIMIT 1
+                    """
+                    result, _ = db.cypher_query(query, {'name': target_name})
+                    
+                    if not result:
+                        errors.append(f"Node '{node_name}': Target node '{target_name}' of type '{target_label}' not found for relationship '{rel_type}'")
+                        continue
+                    
+                    target_id = result[0][0]
+                    
+                    # Create relationship
+                    try:
+                        node_class.connect_nodes(
+                            node.element_id, label,
+                            rel_type.upper(), 
+                            target_id, target_label
+                        )
+                    except Exception as e:
+                        errors.append(f"Node '{node_name}': Failed to create relationship '{rel_type}' to '{target_name}': {str(e)}")
+        
+        # Prepare success/error summary
+        context['success'] = True
+        context['created_count'] = len(created_nodes)
+        context['error_count'] = len(errors)
+        context['errors'] = errors
+        
+        return render(request, 'cmdb/node_import.html', context)
+        
+    except Exception as e:
+        context = {
+            'label': label,
+            'csrf_token': get_token(request),
+            'error': f'Unexpected error: {str(e)}',
+            'all_labels': TypeRegistry.known_labels(),
+        }
+        return render(request, 'cmdb/node_import.html', context)

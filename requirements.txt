@@ -3,3 +3,5 @@ graphene-django>=3.0
 neomodel>=5.0
 django-neomodel
 django-htmx
+pandas>=2.0
+openpyxl>=3.0
