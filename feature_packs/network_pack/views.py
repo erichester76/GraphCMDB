@@ -7,8 +7,9 @@ from cmdb.models import DynamicNode
 
 def interface_details_tab(request, label, element_id):
     """
-    Custom view for Interface Details tab.
+    Context builder for Interface Details tab.
     Shows device it's located on, connected cables, and circuits terminating here.
+    Returns context dictionary rather than rendering template directly.
     """
     context = {
         'label': label,
@@ -119,8 +120,9 @@ def interface_details_tab(request, label, element_id):
 
 def cable_details_tab(request, label, element_id):
     """
-    Custom view for Cable Details tab.
+    Context builder for Cable Details tab.
     Shows both connected interfaces (typically 2 ends).
+    Returns context dictionary rather than rendering template directly.
     """
     context = {
         'label': label,
@@ -192,8 +194,9 @@ def cable_details_tab(request, label, element_id):
 
 def circuit_details_tab(request, label, element_id):
     """
-    Custom view for Circuit Details tab.
+    Context builder for Circuit Details tab.
     Shows terminating interfaces and providing vendor.
+    Returns context dictionary rather than rendering template directly.
     """
     context = {
         'label': label,
@@ -289,8 +292,9 @@ def circuit_details_tab(request, label, element_id):
 
 def vlan_details_tab(request, label, element_id):
     """
-    Custom view for VLAN Details tab.
+    Context builder for VLAN Details tab.
     Shows assigned networks (ASSIGNED_TO incoming from Network nodes).
+    Returns context dictionary rather than rendering template directly.
     """
     context = {
         'label': label,
