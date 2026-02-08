@@ -189,6 +189,25 @@
 </div>
 
 <script>
+/**
+ * Alpine.js Pagination Manager
+ * 
+ * Note: This is a custom implementation because Alpine.js does NOT provide
+ * pre-built pagination components. Unlike React/Vue, Alpine.js is a lightweight
+ * reactive framework, not a component library.
+ * 
+ * Why custom implementation?
+ * 1. No Alpine.js pagination libraries exist (checked npm/community)
+ * 2. Generic JS pagination libs don't integrate with Alpine.js + HTMX
+ * 3. This approach is standard for Alpine.js projects
+ * 4. Provides full control for server-side pagination with HTMX
+ * 
+ * This component manages:
+ * - Current page state
+ * - Items per page selection
+ * - Page number generation with smart visibility
+ * - Navigation via HTMX for server-side pagination
+ */
 function paginationManager(initialPage, initialPerPage, initialTotalCount, initialTotalPages, label) {
     return {
         currentPage: initialPage,
@@ -197,16 +216,19 @@ function paginationManager(initialPage, initialPerPage, initialTotalCount, initi
         totalPages: initialTotalPages,
         label: label,
         
+        // Calculate the starting item number for current page
         get startItem() {
             if (this.totalCount === 0) return 0;
             return (this.currentPage - 1) * this.perPage + 1;
         },
         
+        // Calculate the ending item number for current page
         get endItem() {
             const end = this.currentPage * this.perPage;
             return end > this.totalCount ? this.totalCount : end;
         },
         
+        // Generate array of page numbers to display (max 5 visible)
         get pageNumbers() {
             const pages = [];
             const maxVisible = 5;
@@ -224,16 +246,17 @@ function paginationManager(initialPage, initialPerPage, initialTotalCount, initi
             return pages;
         },
         
+        // Navigate to a specific page using HTMX
         goToPage(page) {
             if (this.totalPages === 0 || page < 1 || page > this.totalPages || page === this.currentPage) return;
             
-            // Use HTMX to fetch the new page
+            // Use HTMX to fetch the new page from server
             const url = `/cmdb/${this.label}/?page=${page}&per_page=${this.perPage}`;
             htmx.ajax('GET', url, {target: '#nodes-content', swap: 'innerHTML'});
         },
         
+        // Change items per page and reset to page 1
         changePerPage() {
-            // Reset to page 1 when changing per page
             const url = `/cmdb/${this.label}/?page=1&per_page=${this.perPage}`;
             htmx.ajax('GET', url, {target: '#nodes-content', swap: 'innerHTML'});
         }
