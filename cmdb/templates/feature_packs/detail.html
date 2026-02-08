@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ pack.display_name }} - Feature Packs{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-6">
+        <a href="{% url 'cmdb:feature_pack_list' %}" 
+           class="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+            <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Feature Packs
+        </a>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+        <h3 class="text-sm font-medium text-red-800 dark:text-red-200">Error</h3>
+        <p class="mt-2 text-sm text-red-700 dark:text-red-300">{{ error }}</p>
+    </div>
+    {% else %}
+    
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ pack.display_name }}</h1>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <span class="font-mono">{{ pack.name }}</span>
+                    </p>
+                </div>
+                {% if pack.enabled %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                    Enabled
+                </span>
+                {% else %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                    Disabled
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="px-6 py-5">
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Path</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white font-mono">{{ pack.path }}</dd>
+                </div>
+                
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Types Provided</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ pack.types|length }}</dd>
+                </div>
+                
+                {% if pack.last_modified %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last Modified</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ pack.last_modified|date:"Y-m-d H:i:s" }}</dd>
+                </div>
+                {% endif %}
+                
+                {% if pack.last_synced %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last Synced</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ pack.last_synced|date:"Y-m-d H:i:s" }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    {% if pack.types %}
+    <div class="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-medium text-gray-900 dark:text-white">Type Definitions</h2>
+        </div>
+        
+        <div class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for type in pack.types %}
+            <div class="px-6 py-4">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h3 class="text-base font-medium text-gray-900 dark:text-white">
+                            {{ type.label }}
+                            {% if type.enabled %}
+                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                Active
+                            </span>
+                            {% endif %}
+                        </h3>
+                        
+                        {% if type.metadata.display_name %}
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                            {{ type.metadata.display_name }}
+                        </p>
+                        {% endif %}
+                        
+                        {% if type.metadata.category %}
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">
+                            Category: <span class="font-medium">{{ type.metadata.category }}</span>
+                        </p>
+                        {% endif %}
+                        
+                        {% if type.metadata.properties %}
+                        <div class="mt-2">
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Properties</p>
+                            <div class="mt-1 flex flex-wrap gap-1">
+                                {% for prop in type.metadata.properties %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                                    {{ prop }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if type.metadata.relationships %}
+                        <div class="mt-2">
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Relationships</p>
+                            <div class="mt-1 flex flex-wrap gap-1">
+                                {% for rel_type, rel_info in type.metadata.relationships.items %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                    {{ rel_type }} → {{ rel_info.target }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if pack.config.tabs %}
+    <div class="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-medium text-gray-900 dark:text-white">UI Tabs</h2>
+        </div>
+        
+        <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for tab in pack.config.tabs %}
+            <li class="px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-900 dark:text-white">{{ tab.name }}</h3>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                            <span class="font-mono">{{ tab.id }}</span>
+                        </p>
+                        {% if tab.for_labels %}
+                        <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                            For: {{ tab.for_labels|join:", " }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% if tab.tab_order is not None %}
+                    <span class="text-xs text-gray-500 dark:text-gray-500">Order: {{ tab.tab_order }}</span>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% endif %}
+</div>
+{% endblock %}
