@@ -786,7 +786,6 @@ def node_disconnect(request, label, element_id):
             'label': label,
             'error_message': str(e)
         })
-        })
         
 @require_http_methods(["GET"])
 def get_target_nodes(request):
