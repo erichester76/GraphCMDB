@@ -144,6 +144,9 @@ def nodes_list(request, label):
     default_columns = metadata.get('columns', [])
     all_properties = metadata.get('properties', [])
     
+    # Collect all relationship types found across all nodes
+    all_relationship_types = set()
+    
     # Extract property values for each node - FOR ALL PROPERTIES, not just default columns
     nodes_data = []
     for node in nodes:
@@ -158,6 +161,23 @@ def nodes_list(request, label):
         for prop in all_properties:
             node_data['columns'][prop] = props.get(prop, '')
         
+        # Fetch relationships for this node
+        out_rels = node.get_outgoing_relationships()
+        in_rels = node.get_incoming_relationships()
+        
+        # Add outbound relationships as columns
+        for rel_type, targets in out_rels.items():
+            all_relationship_types.add(rel_type)
+            target_values = [f"{t['target_label']}:{t['target_name']}" for t in targets]
+            node_data['columns'][rel_type] = ', '.join(target_values)
+        
+        # Add inbound relationships as columns
+        for rel_type, sources in in_rels.items():
+            rel_key = f"{rel_type} (incoming)"
+            all_relationship_types.add(rel_key)
+            source_values = [f"{s['source_label']}:{s['source_name']}" for s in sources]
+            node_data['columns'][rel_key] = ', '.join(source_values)
+        
         # Also compute display_name for backwards compatibility
         if 'name' in props:
             node_data['display_name'] = props['name']
@@ -168,14 +188,17 @@ def nodes_list(request, label):
             node_data['display_name'] = f"Unnamed {label}"
             
         nodes_data.append(node_data)
+    
+    # Combine properties and relationships for all_properties list
+    all_properties_with_rels = list(all_properties) + sorted(all_relationship_types)
             
     context = {
         'label': label,
         'nodes': nodes_data,
         'columns': default_columns,
         'columns_json': json.dumps(default_columns),
-        'all_properties': all_properties,
-        'all_properties_json': json.dumps(all_properties),
+        'all_properties': all_properties_with_rels,
+        'all_properties_json': json.dumps(all_properties_with_rels),
         'all_labels': TypeRegistry.known_labels(),
     }
 
@@ -237,6 +260,36 @@ def node_detail(request, label, element_id):
         # Use helper methods for relationship queries
         out_rels = node.get_outgoing_relationships()
         in_rels = node.get_incoming_relationships()
+        
+        # Add outbound relationships as properties
+        for rel_type, targets in out_rels.items():
+            # Format multiple targets as comma-separated string
+            target_values = []
+            for t in targets:
+                target_values.append(f"{t['target_label']}:{t['target_name']}")
+            props_list.append({
+                'key': rel_type,
+                'value': ', '.join(target_values),
+                'value_type': 'relationship',
+                'is_relationship': True,
+                'relationship_direction': 'outbound',
+                'relationship_data': targets,
+            })
+        
+        # Add inbound relationships as properties
+        for rel_type, sources in in_rels.items():
+            # Format multiple sources as comma-separated string
+            source_values = []
+            for s in sources:
+                source_values.append(f"{s['source_label']}:{s['source_name']}")
+            props_list.append({
+                'key': f"{rel_type} (incoming)",
+                'value': ', '.join(source_values),
+                'value_type': 'relationship',
+                'is_relationship': True,
+                'relationship_direction': 'inbound',
+                'relationship_data': sources,
+            })
 
         feature_pack_tabs = []
         for tab in getattr(settings, 'FEATURE_PACK_TABS', []):
@@ -410,6 +463,9 @@ def node_delete(request, label, element_id):
         default_columns = metadata.get('columns', [])
         all_properties = metadata.get('properties', [])
         
+        # Collect all relationship types found across all nodes
+        all_relationship_types = set()
+        
         # Extract property values for each node - FOR ALL PROPERTIES
         nodes_data = []
         for node in nodes:
@@ -424,12 +480,32 @@ def node_delete(request, label, element_id):
             for prop in all_properties:
                 node_data['columns'][prop] = props.get(prop, '')
             
+            # Fetch relationships for this node
+            out_rels = node.get_outgoing_relationships()
+            in_rels = node.get_incoming_relationships()
+            
+            # Add outbound relationships as columns
+            for rel_type, targets in out_rels.items():
+                all_relationship_types.add(rel_type)
+                target_values = [f"{t['target_label']}:{t['target_name']}" for t in targets]
+                node_data['columns'][rel_type] = ', '.join(target_values)
+            
+            # Add inbound relationships as columns
+            for rel_type, sources in in_rels.items():
+                rel_key = f"{rel_type} (incoming)"
+                all_relationship_types.add(rel_key)
+                source_values = [f"{s['source_label']}:{s['source_name']}" for s in sources]
+                node_data['columns'][rel_key] = ', '.join(source_values)
+            
             nodes_data.append(node_data)
+        
+        # Combine properties and relationships for all_properties list
+        all_properties_with_rels = list(all_properties) + sorted(all_relationship_types)
         
         return render(request, 'cmdb/partials/nodes_table.html', {
             'nodes': nodes_data,
             'columns': default_columns,
-            'all_properties': all_properties,
+            'all_properties': all_properties_with_rels,
             'label': label,
         })
 
