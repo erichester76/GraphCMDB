@@ -12,6 +12,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',             # Django REST Framework
     'django_htmx',
     'graphene_django',          # GraphQL support
     'cmdb.apps.CmdbConfig',     # our app
@@ -51,6 +52,19 @@ TEMPLATES = [
 # Graphene / GraphQL
 GRAPHENE = {
     'SCHEMA': 'cmdb.schema.schema'   
+}
+
+# Django REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 100,
 }
 
 # Neo4j connection (used by neomodel)

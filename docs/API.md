@@ -1,14 +1,22 @@
 # REST API Documentation
 
-GraphCMDB provides a REST API for CRUD operations on all node types. All endpoints return JSON responses.
+GraphCMDB provides a REST API for CRUD operations on all node types using Django REST Framework. All endpoints return JSON responses and follow REST conventions.
 
 ## Base URL
 
 All API endpoints are prefixed with `/api/`
 
+## Technology
+
+The API is built using [Django REST Framework](https://www.django-rest-framework.org/) with ViewSets for clean, organized endpoint structure.
+
 ## Authentication
 
-Currently, the API uses Django's session authentication. For production use, consider implementing token-based authentication (e.g., JWT or API keys).
+Currently, the API uses Django's session authentication. For production use, consider implementing token-based authentication (e.g., DRF's TokenAuthentication or JWT).
+
+## Browsable API
+
+Django REST Framework provides a browsable API interface. You can access it by visiting any endpoint in a web browser (e.g., `http://localhost:8000/api/`).
 
 ## Endpoints
 
@@ -51,12 +59,12 @@ Get all nodes of a specific type.
 
 **Request:**
 ```
-GET /api/nodes/<label>/?limit=100&skip=0
+GET /api/nodes/<label>/?limit=100&offset=0
 ```
 
 **Query Parameters:**
 - `limit` (optional): Maximum number of results (default: 100)
-- `skip` (optional): Number of results to skip for pagination (default: 0)
+- `offset` (optional): Number of results to skip for pagination (default: 0)
 
 **Response:**
 ```json
@@ -139,7 +147,6 @@ Content-Type: application/json
   "success": true,
   "node": {
     "id": "4:abc123...",
-    "label": "Device",
     "properties": {
       "name": "Server-01",
       "status": "active",
@@ -157,11 +164,25 @@ Content-Type: application/json
 
 ### Update Node
 
-Update an existing node (supports both PUT and PATCH methods).
+Update an existing node. Supports both full updates (PUT) and partial updates (PATCH).
 
-**Request:**
+**Full Update (PUT):**
 ```
 PUT /api/nodes/<label>/<element_id>/
+Content-Type: application/json
+
+{
+  "properties": {
+    "name": "Server-01",
+    "status": "maintenance",
+    "serial_number": "SN12345"
+  }
+}
+```
+
+**Partial Update (PATCH):**
+```
+PATCH /api/nodes/<label>/<element_id>/
 Content-Type: application/json
 
 {
@@ -177,7 +198,6 @@ Content-Type: application/json
   "success": true,
   "node": {
     "id": "4:abc123...",
-    "label": "Device",
     "properties": {
       "name": "Server-01",
       "status": "maintenance",
@@ -189,7 +209,7 @@ Content-Type: application/json
 
 **Status Codes:**
 - `200 OK`: Node updated successfully
-- `400 Bad Request`: Invalid JSON
+- `400 Bad Request`: Invalid JSON or validation error
 - `404 Not Found`: Node or node type not found
 - `500 Internal Server Error`: Server error
 
@@ -278,6 +298,18 @@ All error responses follow this format:
 }
 ```
 
+For validation errors, additional details may be included:
+
+```json
+{
+  "success": false,
+  "error": "Invalid request data",
+  "details": {
+    "properties": ["This field is required."]
+  }
+}
+```
+
 ## Examples
 
 ### Using curl
@@ -304,9 +336,9 @@ curl -X POST http://localhost:8000/api/nodes/Device/ \
 curl http://localhost:8000/api/nodes/Device/4:abc123.../
 ```
 
-**Update a device:**
+**Update a device (partial):**
 ```bash
-curl -X PUT http://localhost:8000/api/nodes/Device/4:abc123.../ \
+curl -X PATCH http://localhost:8000/api/nodes/Device/4:abc123.../ \
   -H "Content-Type: application/json" \
   -d '{
     "properties": {
@@ -359,8 +391,8 @@ node_id = node['node']['id']
 response = requests.get(f"{base_url}/nodes/Device/{node_id}/")
 node = response.json()
 
-# Update the node
-response = requests.put(
+# Update the node (partial)
+response = requests.patch(
     f"{base_url}/nodes/Device/{node_id}/",
     json={
         "properties": {
@@ -373,10 +405,76 @@ response = requests.put(
 response = requests.delete(f"{base_url}/nodes/Device/{node_id}/")
 ```
 
+### Using httpie
+
+```bash
+# List node types
+http GET localhost:8000/api/types/
+
+# Create a device
+http POST localhost:8000/api/nodes/Device/ \
+  properties:='{"name": "Server-01", "status": "active"}'
+
+# Get a device
+http GET localhost:8000/api/nodes/Device/4:abc123.../
+
+# Update a device
+http PATCH localhost:8000/api/nodes/Device/4:abc123.../ \
+  properties:='{"status": "maintenance"}'
+
+# Delete a device
+http DELETE localhost:8000/api/nodes/Device/4:abc123.../
+```
+
+## Architecture
+
+### ViewSets
+
+The API uses Django REST Framework's ViewSet pattern for clean, organized code:
+
+- **NodeTypeViewSet**: Handles listing node type metadata
+- **NodeViewSet**: Handles all CRUD operations on nodes and relationships
+
+### Serializers
+
+Data validation and transformation is handled by DRF serializers:
+
+- **NodeTypeSerializer**: Node type metadata
+- **NodeSerializer**: Basic node representation
+- **NodeDetailSerializer**: Detailed node with relationships
+- **NodeCreateUpdateSerializer**: Input validation for create/update
+- **RelationshipCreateSerializer**: Input validation for relationships
+
+### URL Routing
+
+URLs are automatically generated by DRF's DefaultRouter and custom ViewSet actions, providing a clean RESTful interface.
+
+## Pagination
+
+The API uses Django REST Framework's LimitOffsetPagination with a default page size of 100 items. You can control pagination using query parameters:
+
+- `limit`: Number of items to return
+- `offset`: Number of items to skip
+
+Example:
+```
+GET /api/nodes/Device/?limit=50&offset=100
+```
+
 ## CSRF Protection
 
-For POST, PUT, PATCH, and DELETE requests, CSRF protection is currently disabled using the `@csrf_exempt` decorator for API endpoints. In production, you should implement proper authentication and authorization mechanisms.
+For web browser clients, CSRF protection is enabled. API clients should either:
+1. Include CSRF tokens in requests
+2. Use authentication methods that don't require CSRF (e.g., Token auth)
+3. Mark specific views as CSRF-exempt for API-only endpoints
 
 ## Audit Logging
 
 All API operations (create, update, delete, connect, disconnect) are logged in the audit log if the audit_log_pack feature pack is enabled.
+
+## Content Negotiation
+
+The API supports content negotiation and can return:
+- JSON (default): `Accept: application/json`
+- Browsable HTML (for web browsers): `Accept: text/html`
+
