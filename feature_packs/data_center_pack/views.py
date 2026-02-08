@@ -9,7 +9,12 @@ def rack_elevation_tab(request, label, element_id):
         'label': label,
         'element_id': element_id,
         'node': None,
-        'custom_data': [],
+        'custom_data': {
+            'properties': [],
+            'location_chain': [],
+            'rack_units': [],
+            'error': None,
+        },
         'error': None,
     }
 
@@ -19,14 +24,54 @@ def rack_elevation_tab(request, label, element_id):
         node = node_class.get_by_element_id(element_id)
         if not node:
             context['error'] = f"Rack node not found: {element_id}"
+            context['custom_data']['error'] = context['error']
             return context  # ← return dict, not render
 
         context['node'] = node
+
+        # Build properties list
+        custom_props = node.custom_properties or {}
+        props_list = []
+        for key, value in custom_props.items():
+            props_list.append({
+                'key': key,
+                'value': value,
+                'value_type': type(value).__name__,
+            })
+        context['custom_data']['properties'] = props_list
+
+        # Follow LOCATED_IN relationships to get location hierarchy
+        location_query = f"""
+            MATCH (n:`{label}`) WHERE elementId(n) = $eid
+            OPTIONAL MATCH path = (n)-[:LOCATED_IN*]->(location)
+            WITH n, location, 
+                 apoc.convert.fromJsonMap(location.custom_properties) AS loc_props,
+                 labels(location)[0] AS loc_label,
+                 elementId(location) AS loc_id,
+                 length(path) AS depth
+            RETURN loc_label, loc_id, 
+                   COALESCE(loc_props.name, 'Unnamed') AS loc_name,
+                   depth
+            ORDER BY depth ASC
+        """
+        location_result, _ = db.cypher_query(location_query, {'eid': element_id})
+        
+        location_chain = []
+        for row in location_result:
+            if row[0]:  # If there's a label
+                location_chain.append({
+                    'label': row[0],
+                    'id': row[1],
+                    'name': row[2],
+                    'depth': row[3],
+                })
+        context['custom_data']['location_chain'] = location_chain
 
         # Get height_units
         height = node.get_property('height', 0)
         if not height:
             context['error'] = "No height defined for this rack"
+            context['custom_data']['error'] = context['error']
             return context
 
         height = int(height)
@@ -76,10 +121,11 @@ def rack_elevation_tab(request, label, element_id):
             })
             rack_units.append(unit)
             
-        context['custom_data'] = rack_units
+        context['custom_data']['rack_units'] = rack_units
 
     except Exception as e:
         context['error'] = str(e)
+        context['custom_data']['error'] = str(e)
 
     return context  # ← return dict only
 
