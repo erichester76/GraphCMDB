@@ -1,6 +1,7 @@
 # cmdb/urls.py
 from django.urls import path
 from . import views
+from . import feature_pack_views
 
 app_name = 'cmdb'  
 
@@ -9,7 +10,16 @@ urlpatterns = [
     
     path('', views.dashboard, name='dashboard'),
     
+    path('audit-log/', views.audit_log_list, name='audit_log_list'),
+    
     path('targets/', views.get_target_nodes, name='get_target_nodes'),
+    
+    # Feature pack management URLs
+    path('feature-packs/', feature_pack_views.feature_pack_list, name='feature_pack_list'),
+    path('feature-packs/api/status/', feature_pack_views.feature_pack_status_api, name='feature_pack_status_api'),
+    path('feature-packs/<str:pack_name>/', feature_pack_views.feature_pack_detail, name='feature_pack_detail'),
+    path('feature-packs/<str:pack_name>/enable/', feature_pack_views.feature_pack_enable, name='feature_pack_enable'),
+    path('feature-packs/<str:pack_name>/disable/', feature_pack_views.feature_pack_disable, name='feature_pack_disable'),
 
     path('<str:label>/', views.nodes_list, name='nodes_list'),
     path('<str:label>/create/', views.node_create, name='node_create'),

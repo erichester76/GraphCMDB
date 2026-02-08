@@ -3,37 +3,75 @@
 from django.shortcuts import render
 from neomodel import db
 from cmdb.models import DynamicNode
-import apoc
 
 def rack_elevation_tab(request, label, element_id):
     context = {
         'label': label,
         'element_id': element_id,
         'node': None,
-        'custom_data': [],
+        'custom_data': {
+            'properties': [],
+            'location_chain': [],
+            'rack_units': [],
+            'error': None,
+        },
         'error': None,
     }
 
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        query = f"""
-            MATCH (n:`{label}`)
-            WHERE elementId(n) = $eid
-            RETURN n
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
+        # Use helper method instead of raw Cypher
+        node = node_class.get_by_element_id(element_id)
+        if not node:
             context['error'] = f"Rack node not found: {element_id}"
+            context['custom_data']['error'] = context['error']
             return context  # ← return dict, not render
 
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
         context['node'] = node
 
+        # Build properties list
+        custom_props = node.custom_properties or {}
+        props_list = []
+        for key, value in custom_props.items():
+            props_list.append({
+                'key': key,
+                'value': value,
+                'value_type': type(value).__name__,
+            })
+        context['custom_data']['properties'] = props_list
+
+        # Follow LOCATED_IN relationships to get location hierarchy
+        location_query = f"""
+            MATCH (n:`{label}`) WHERE elementId(n) = $eid
+            OPTIONAL MATCH path = (n)-[:LOCATED_IN*]->(location)
+            WITH n, location, 
+                 apoc.convert.fromJsonMap(location.custom_properties) AS loc_props,
+                 labels(location)[0] AS loc_label,
+                 elementId(location) AS loc_id,
+                 length(path) AS depth
+            RETURN loc_label, loc_id, 
+                   COALESCE(loc_props.name, 'Unnamed') AS loc_name,
+                   depth
+            ORDER BY depth ASC
+        """
+        location_result, _ = db.cypher_query(location_query, {'eid': element_id})
+        
+        location_chain = []
+        for row in location_result:
+            if row[0]:  # If there's a label
+                location_chain.append({
+                    'label': row[0],
+                    'id': row[1],
+                    'name': row[2],
+                    'depth': row[3],
+                })
+        context['custom_data']['location_chain'] = location_chain
+
         # Get height_units
-        height = node.custom_properties.get('height', 0)
+        height = node.get_property('height', 0)
         if not height:
             context['error'] = "No height defined for this rack"
+            context['custom_data']['error'] = context['error']
             return context
 
         height = int(height)
@@ -83,10 +121,11 @@ def rack_elevation_tab(request, label, element_id):
             })
             rack_units.append(unit)
             
-        context['custom_data'] = rack_units
+        context['custom_data']['rack_units'] = rack_units
 
     except Exception as e:
         context['error'] = str(e)
+        context['custom_data']['error'] = str(e)
 
     return context  # ← return dict only
 
@@ -105,18 +144,12 @@ def row_racks_tab(request, label, element_id):
 
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        query = f"""
-            MATCH (n:`{label}`)
-            WHERE elementId(n) = $eid
-            RETURN n
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
+        # Use helper method instead of raw Cypher
+        node = node_class.get_by_element_id(element_id)
+        if not node:
             context['error'] = f"Row node not found: {element_id}"
             return context
 
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
         context['node'] = node
 
         # Fetch all racks located in this row (incoming LOCATED_IN rels)
@@ -171,32 +204,16 @@ def room_racks_tab(request, label, element_id):
     print(f"DEBUG: Fetching room data for element_id: {element_id} with label: {label}")
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        query = f"""
-            MATCH (room:`{label}`)
-            WHERE elementId(room) = $eid
-            
-            WITH 
-                room,
-                apoc.convert.fromJsonMap(room.custom_properties) AS room_props
-
-            RETURN 
-                  COALESCE(room_props.orientation, 'LeftToRight') AS room_orientation,
-                  room
-
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        print(f"DEBUG: Room query result: {result}")
-        
-        if not result:
+        # Use helper method instead of raw Cypher for node retrieval
+        node = node_class.get_by_element_id(element_id)
+        if not node:
             context['error'] = f"Room node not found: {element_id}"
             return context
 
-        raw_room = result[0][1]
-        room_node = node_class.inflate(raw_room)
-        context['node'] = room_node
+        context['node'] = node
 
-        # Get room orientation (for overall row ordering)
-        room_orientation = result[0][0] if result[0][0] else 'LeftToRight'
+        # Get room orientation from custom properties (using helper method)
+        room_orientation = node.get_property('orientation', 'LeftToRight')
         context['room_orientation'] = room_orientation
         
         print(f"DEBUG: Room orientation: {room_orientation} for room {element_id}")

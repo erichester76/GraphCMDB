@@ -1,0 +1,78 @@
+<h1 id="page-title" class="text-xl font-semibold text-gray-900 dark:text-white" hx-swap-oob="true">
+    {{ label }} Nodes
+</h1>
+<div id="header-actions" 
+     hx-swap-oob="true"
+     hx-on::after-swap="console.log('Header swapped via OOB'); if(window.Alpine){Alpine.nextTick(()=>console.log('Alpine tick'));}">
+    <div class="flex items-center gap-4" 
+         x-data="listViewManager('{{ label }}', {{ columns_json }}, {{ all_properties_json }})"
+         x-init="console.log('Alpine init for:', label, 'columns:', availableColumns); init();"
+         @htmx:after-swap.window="$el.closest('[x-data]').__x && $el.closest('[x-data]').__x.$data.initFromStorage()"
+         @sort-column.window="sortBy($event.detail.column)">
+        
+        <!-- Column Selector -->
+        <div class="relative" @click.away="dropdownOpen = false">
+            <button 
+                @click="dropdownOpen = !dropdownOpen"
+                type="button"
+                class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 0v10" />
+                </svg>
+                Columns
+            </button>
+            <div x-show="dropdownOpen" 
+                 x-transition
+                 class="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 z-10">
+                <div class="py-1" role="menu">
+                    <div class="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                        Show/Hide Columns
+                    </div>
+                    <template x-for="prop in availableColumns" :key="prop">
+                        <label class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer">
+                            <input type="checkbox" 
+                                   :checked="visibleColumns.includes(prop)"
+                                   @change="toggleColumn(prop)"
+                                   class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-200" x-text="prop.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())"></span>
+                        </label>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Input -->
+        <div class="relative">
+            <input type="text" 
+                   x-model="filterText"
+                   @input="applyFilter()"
+                   placeholder="Filter..."
+                   class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48">
+            <button @click="filterText = ''; applyFilter()"
+                    x-show="filterText.length > 0"
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <button 
+            hx-get="{% url 'cmdb:node_create' label %}" 
+            hx-target="#create-modal-content"
+            hx-swap="innerHTML"
+            hx-trigger="click"
+            onclick="document.getElementById('create-modal').showModal()"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800">
+            Create {{ label }}
+        </button>
+
+        <button 
+            hx-get="{% url 'cmdb:nodes_list' label %}" 
+            hx-target="#nodes-content"
+            hx-swap="innerHTML"
+            class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Refresh
+        </button>
+    </div>
+</div>

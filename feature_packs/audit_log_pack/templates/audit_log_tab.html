@@ -1,0 +1,81 @@
+<!-- Audit Log Tab Template -->
+<div class="space-y-4">
+    <div class="flex justify-between items-center">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Audit Log</h3>
+        <span class="text-sm text-gray-500 dark:text-gray-400">Recent changes to this node</span>
+    </div>
+
+    {% if error %}
+        <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+            Error loading audit log: {{ error }}
+        </div>
+    {% elif custom_data.audit_entries %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Timestamp
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Action
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            User
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Details
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for entry in custom_data.audit_entries %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                {{ entry.timestamp|slice:":19" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    {% if entry.action == 'create' %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200
+                                    {% elif entry.action == 'update' %}bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200
+                                    {% elif entry.action == 'delete' %}bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200
+                                    {% elif entry.action == 'connect' %}bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200
+                                    {% elif entry.action == 'disconnect' %}bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200
+                                    {% else %}bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200{% endif %}">
+                                    {{ entry.action|upper }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                {{ entry.user }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                                {% if entry.action == 'create' %}
+                                    Node created
+                                {% elif entry.action == 'update' %}
+                                    {% if entry.changes %}
+                                        {{ entry.changes }}
+                                    {% else %}
+                                        Properties updated
+                                    {% endif %}
+                                {% elif entry.action == 'delete' %}
+                                    Node deleted
+                                {% elif entry.action == 'connect' %}
+                                    Connected via {{ entry.relationship_type }} to {{ entry.target_label }}
+                                {% elif entry.action == 'disconnect' %}
+                                    Disconnected {{ entry.relationship_type }} from {{ entry.target_label }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-center py-8">
+            <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">No audit log entries found for this node</p>
+        </div>
+    {% endif %}
+</div>

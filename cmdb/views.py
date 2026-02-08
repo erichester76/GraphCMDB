@@ -12,6 +12,74 @@ from django.template import Context, Template
 from django.conf import settings
 import importlib
 
+# Import audit log utility if available
+try:
+    import sys
+    import os
+    # Add feature_packs to sys.path if not already there
+    feature_packs_path = os.path.join(settings.BASE_DIR, 'feature_packs')
+    if feature_packs_path not in sys.path:
+        sys.path.insert(0, feature_packs_path)
+    from audit_log_pack.views import create_audit_entry
+except ImportError:
+    # If audit log pack is not available, use a no-op function
+    def create_audit_entry(*args, **kwargs):
+        pass
+
+def build_properties_list_with_relationships(node):
+    """
+    Helper function to build a properties list that includes both regular properties
+    and relationships formatted as properties.
+    
+    Args:
+        node: A DynamicNode instance
+        
+    Returns:
+        list: A list of property dictionaries with keys: key, value, value_type, 
+              is_relationship, and optionally relationship_direction and relationship_data
+    """
+    custom_props = node.custom_properties or {}
+    props_list = []
+    
+    # Add regular properties
+    for key, value in custom_props.items():
+        props_list.append({
+            'key': key,
+            'value': value,
+            'value_type': type(value).__name__,
+            'is_relationship': False,
+        })
+    
+    # Get relationships
+    out_rels = node.get_outgoing_relationships()
+    in_rels = node.get_incoming_relationships()
+    
+    # Add outbound relationships as properties
+    for rel_type, targets in out_rels.items():
+        target_values = [f"{t['target_label']}:{t['target_name']}" for t in targets]
+        props_list.append({
+            'key': rel_type,
+            'value': ', '.join(target_values),
+            'value_type': 'relationship',
+            'is_relationship': True,
+            'relationship_direction': 'outbound',
+            'relationship_data': targets,
+        })
+    
+    # Add inbound relationships as properties
+    for rel_type, sources in in_rels.items():
+        source_values = [f"{s['source_label']}:{s['source_name']}" for s in sources]
+        props_list.append({
+            'key': f"{rel_type} (incoming)",
+            'value': ', '.join(source_values),
+            'value_type': 'relationship',
+            'is_relationship': True,
+            'relationship_direction': 'inbound',
+            'relationship_data': sources,
+        })
+    
+    return props_list
+
 @require_http_methods(["GET", "POST"])
 def type_register(request):
     if request.method == 'GET':
@@ -104,14 +172,11 @@ def dashboard(request):
     counts = {}
     for label in labels:
         try:
-            # Raw Cypher count - always accurate, no neomodel quirks
-            result, _ = db.cypher_query(f"""
-                MATCH (n:`{label}`)
-                RETURN count(n) AS cnt
-            """)
-            count = result[0][0] if result else 0
+            # Use Neomodel's count method instead of raw Cypher
+            node_class = DynamicNode.get_or_create_label(label)
+            count = node_class.nodes.count()
             counts[label] = count
-            print(f"Dashboard Cypher count for {label}: {count}")
+            print(f"Dashboard Neomodel count for {label}: {count}")
         except Exception as e:
             print(f"Error counting {label}: {e}")
             counts[label] = 0
@@ -121,6 +186,13 @@ def dashboard(request):
         'counts': counts,
         'all_labels': labels,
     }
+    
+    # If HTMX request, include header partial for out-of-band swap
+    if request.htmx:
+        content_html = render_to_string('cmdb/partials/dashboard_content.html', context, request=request)
+        header_html = render_to_string('cmdb/partials/dashboard_header.html', context, request=request)
+        return HttpResponse(content_html + header_html)
+    
     return render(request, 'cmdb/dashboard.html', context)
 
 def nodes_list(request, label):
@@ -135,27 +207,78 @@ def nodes_list(request, label):
         print(f"Error fetching {label}: {e}")
         nodes = []
     
-    # Add a computed .name attribute to each node for template use
+    # Get column configuration from type registry
+    metadata = TypeRegistry.get_metadata(label)
+    default_columns = metadata.get('columns', [])
+    all_properties = metadata.get('properties', [])
+    
+    # Collect all relationship types found across all nodes
+    all_relationship_types = set()
+    
+    # Extract property values for each node - FOR ALL PROPERTIES, not just default columns
+    nodes_data = []
     for node in nodes:
         props = node.custom_properties or {}
+        node_data = {
+            'element_id': node.element_id,
+            'node': node,
+            'columns': {}
+        }
+        
+        # Extract values for ALL properties (so DOM elements exist for column toggle)
+        for prop in all_properties:
+            node_data['columns'][prop] = props.get(prop, '')
+        
+        # Fetch relationships for this node
+        out_rels = node.get_outgoing_relationships()
+        in_rels = node.get_incoming_relationships()
+        
+        # Add outbound relationships as columns
+        for rel_type, targets in out_rels.items():
+            all_relationship_types.add(rel_type)
+            target_values = [f"{t['target_label']}:{t['target_name']}" for t in targets]
+            node_data['columns'][rel_type] = ', '.join(target_values)
+        
+        # Add inbound relationships as columns
+        for rel_type, sources in in_rels.items():
+            rel_key = f"{rel_type} (incoming)"
+            all_relationship_types.add(rel_key)
+            source_values = [f"{s['source_label']}:{s['source_name']}" for s in sources]
+            node_data['columns'][rel_key] = ', '.join(source_values)
+        
+        # Also compute display_name for backwards compatibility
         if 'name' in props:
-            node.display_name = props['name']
+            node_data['display_name'] = props['name']
         elif props:
-            # Get first property value (sorted by key)
             first_key = sorted(props.keys())[0]
-            node.display_name = str(props[first_key])
+            node_data['display_name'] = str(props[first_key])
         else:
-            node.display_name = f"Unnamed {label}"
+            node_data['display_name'] = f"Unnamed {label}"
+            
+        nodes_data.append(node_data)
+    
+    # Combine properties and relationships for all_properties list
+    all_properties_with_rels = list(all_properties) + sorted(all_relationship_types)
             
     context = {
         'label': label,
-        'nodes': nodes,
+        'nodes': nodes_data,
+        'columns': default_columns,
+        'columns_json': json.dumps(default_columns),
+        'all_properties': all_properties_with_rels,
+        'all_properties_json': json.dumps(all_properties_with_rels),
         'all_labels': TypeRegistry.known_labels(),
     }
 
-    # If request is from HTMX (partial refresh), return only the table
+    # If request is from HTMX, return content + header for OOB swap
     if request.htmx:
-        return render(request, 'cmdb/partials/nodes_table.html', context)
+        # Check if this is a table-only refresh (from refresh button)
+        if request.headers.get('HX-Target') == 'nodes-content':
+            return render(request, 'cmdb/partials/nodes_table.html', context)
+        # Otherwise it's a full navigation, include header
+        content_html = render_to_string('cmdb/partials/nodes_list_content.html', context, request=request)
+        header_html = render_to_string('cmdb/partials/nodes_list_header.html', context, request=request)
+        return HttpResponse(content_html + header_html)
 
     return render(request, 'cmdb/nodes_list.html', context)
 
@@ -181,109 +304,70 @@ def node_add_relationship_form(request, label, element_id):
 def node_detail(request, label, element_id):
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        query = f"""
-            MATCH (n:`{label}`)
-            WHERE elementId(n) = $eid
-            RETURN n
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
+        # Use helper method instead of raw Cypher
+        node = node_class.get_by_element_id(element_id)
+        if not node:
             raise node_class.DoesNotExist
 
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
-
-        props_list = []
-        for key, value in (node.custom_properties or {}).items():
-            props_list.append({
-                'key': key,
-                'value': value,
-                'value_type': type(value).__name__,
-            })
-
-        out_rels_query = f"""
-            MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (n)-[r]->(m)
-            WITH 
-                type(r) AS rel_type,
-                elementId(m) AS target_id,
-                labels(m)[0] AS target_label,
-                apoc.convert.fromJsonMap(m.custom_properties) AS props_map
-            RETURN 
-                rel_type,
-                target_id,
-                target_label,
-                COALESCE(
-                    props_map.name,
-                    props_map[head(keys(props_map))]
-                ) AS target_name
-        """
-
-        out_rels_result, _ = db.cypher_query(out_rels_query, {'eid': element_id})
-
-        out_rels = {}
-        for row in out_rels_result:
-            rel_type = row[0]
-            if rel_type not in out_rels:
-                out_rels[rel_type] = []
-            out_rels[rel_type].append({
-                'target_id': row[1],
-                'target_label': row[2],
-                'target_name': row[3] or row[1][:50] + '...',
-            })
-            
-        # Fetch incoming relationships with Cypher
-        in_rels_query = f"""
-            MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (m)-[r]->(n)
-            WITH 
-                type(r) AS rel_type,
-                elementId(m) AS source_id,
-                labels(m)[0] AS source_label,
-                apoc.convert.fromJsonMap(m.custom_properties) AS props_map
-            RETURN 
-                rel_type,
-                source_id,
-                source_label,
-                COALESCE(
-                    props_map.name,
-                    props_map[head(keys(props_map))]
-                ) AS source_name
-        """
-        in_rels_result, _ = db.cypher_query(in_rels_query, {'eid': element_id})
-
-        in_rels = {}
-        for row in in_rels_result:
-            rel_type = row[0]
-            if rel_type not in in_rels:
-                in_rels[rel_type] = []
-            in_rels[rel_type].append({
-                'source_id': row[1],
-                'source_label': row[2],
-                'source_name': row[3] or row[1][:50] + '...',
-            })
+        # Extract display name first
+        custom_props = node.custom_properties or {}
+        display_name = custom_props.get('name')
+        if not display_name:
+            display_name = f"{element_id[:8]}..."
+        
+        # Build properties list with relationships using helper function
+        props_list = build_properties_list_with_relationships(node)
+        
+        # Get relationships for backwards compatibility with templates
+        out_rels = node.get_outgoing_relationships()
+        in_rels = node.get_incoming_relationships()
 
         feature_pack_tabs = []
         for tab in getattr(settings, 'FEATURE_PACK_TABS', []):
-            if label in tab.get('for_labels', []):
+            # Check if tab applies to this label
+            # Empty for_labels means apply to all labels
+            tab_for_labels = tab.get('for_labels', [])
+            if not tab_for_labels or label in tab_for_labels:
                 tab_copy = tab.copy()
+                # Set default tab_order if not specified
+                # Tab ordering: 0 = first (before Core Details), 1 = Core Details, 2+ = after Core Details
+                # Valid range: 0-100 (sorted left to right)
+                if 'tab_order' not in tab_copy:
+                    tab_copy['tab_order'] = 2  # Default feature pack tabs come after core details (1)
                 if tab.get('custom_view'):
                     # Call the pack's custom view function
                     pack_view = importlib.import_module(tab['custom_view'].rsplit('.', 1)[0])
                     custom_view_func = getattr(pack_view, tab['custom_view'].rsplit('.', 1)[1])
                     tab_copy['context'] = custom_view_func(request, label, element_id)
                 feature_pack_tabs.append(tab_copy)
+        
+        # Sort tabs by tab_order (0-100 range, left to right)
+        feature_pack_tabs.sort(key=lambda x: x.get('tab_order', 2))
+        
+        # Determine initial active tab: first tab with order 0, otherwise 'core'
+        initial_active_tab = 'core'
+        if feature_pack_tabs and feature_pack_tabs[0].get('tab_order') == 0:
+            initial_active_tab = feature_pack_tabs[0]['id']
 
         context = {
             'label': label,
             'element_id': element_id,
             'node': node,
+            'display_name': display_name,
             'properties_list': props_list,
             'outbound_relationships': out_rels,
             'inbound_relationships': in_rels,
             'all_labels': TypeRegistry.known_labels(),
-            'feature_pack_tabs': feature_pack_tabs
+            'feature_pack_tabs': feature_pack_tabs,
+            'initial_active_tab': initial_active_tab,
         }
+        
+        # If HTMX request, include header partial for out-of-band swap
+        if request.htmx:
+            content_html = render_to_string('cmdb/partials/node_detail_content.html', context, request=request)
+            header_html = render_to_string('cmdb/partials/node_detail_header.html', context, request=request)
+            return HttpResponse(content_html + header_html)
+        
         return render(request, 'cmdb/node_detail.html', context)
 
     except node_class.DoesNotExist as e:
@@ -296,17 +380,10 @@ def node_edit(request, label, element_id):
     
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        query = f"""
-            MATCH (n:`{label}`)
-            WHERE elementId(n) = $eid
-            RETURN n
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
+        # Use helper method instead of raw Cypher
+        node = node_class.get_by_element_id(element_id)
+        if not node:
             raise node_class.DoesNotExist
-
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
 
     except node_class.DoesNotExist:
         return JsonResponse({'error': 'Node not found'}, status=404)
@@ -381,9 +458,22 @@ def node_edit(request, label, element_id):
 
         # Merge with existing
         current = node.custom_properties or {}
+        old_props = current.copy()
         current.update(new_props)
         node.custom_properties = current
         node.save()
+
+        # Create audit log entry
+        node_name = current.get('name', '')
+        changed_keys = [k for k in new_props.keys() if old_props.get(k) != new_props.get(k)]
+        create_audit_entry(
+            action='update',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'System',
+            changes=f"Updated properties: {', '.join(changed_keys)}" if changed_keys else "Properties updated"
+        )
 
         return render(request, 'cmdb/partials/edit_success.html', {
             'message': 'Node updated successfully'
@@ -405,30 +495,85 @@ def node_edit(request, label, element_id):
 def node_delete(request, label, element_id):
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        # Cypher lookup
-        query = f"""
-            MATCH (n:`{label}`)
-            WHERE elementId(n) = $eid
-            RETURN n
-        """
-        result, _ = db.cypher_query(query, {'eid': element_id})
-        if not result:
+        # Use helper method instead of raw Cypher
+        node = node_class.get_by_element_id(element_id)
+        if not node:
             return JsonResponse({'error': 'Node not found'}, status=404)
 
-        raw_node = result[0][0]
-        node = node_class.inflate(raw_node)
+        # Store node info before deleting for audit log
+        node_name = (node.custom_properties or {}).get('name', '')
+        
+        # Create audit log entry before deletion
+        create_audit_entry(
+            action='delete',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'System',
+            changes='Node deleted'
+        )
+
         node.delete()
 
         # Return refreshed table body (same as nodes_list partial)
         nodes = node_class.nodes.all()[:50]
+        
+        # Get column configuration from type registry
+        metadata = TypeRegistry.get_metadata(label)
+        default_columns = metadata.get('columns', [])
+        all_properties = metadata.get('properties', [])
+        
+        # Collect all relationship types found across all nodes
+        all_relationship_types = set()
+        
+        # Extract property values for each node - FOR ALL PROPERTIES
+        nodes_data = []
+        for node in nodes:
+            props = node.custom_properties or {}
+            node_data = {
+                'element_id': node.element_id,
+                'node': node,
+                'columns': {}
+            }
+            
+            # Extract values for ALL properties (so DOM elements exist for column toggle)
+            for prop in all_properties:
+                node_data['columns'][prop] = props.get(prop, '')
+            
+            # Fetch relationships for this node
+            out_rels = node.get_outgoing_relationships()
+            in_rels = node.get_incoming_relationships()
+            
+            # Add outbound relationships as columns
+            for rel_type, targets in out_rels.items():
+                all_relationship_types.add(rel_type)
+                target_values = [f"{t['target_label']}:{t['target_name']}" for t in targets]
+                node_data['columns'][rel_type] = ', '.join(target_values)
+            
+            # Add inbound relationships as columns
+            for rel_type, sources in in_rels.items():
+                rel_key = f"{rel_type} (incoming)"
+                all_relationship_types.add(rel_key)
+                source_values = [f"{s['source_label']}:{s['source_name']}" for s in sources]
+                node_data['columns'][rel_key] = ', '.join(source_values)
+            
+            nodes_data.append(node_data)
+        
+        # Combine properties and relationships for all_properties list
+        all_properties_with_rels = list(all_properties) + sorted(all_relationship_types)
+        
         return render(request, 'cmdb/partials/nodes_table.html', {
-            'nodes': nodes,
+            'nodes': nodes_data,
+            'columns': default_columns,
+            'all_properties': all_properties_with_rels,
             'label': label,
         })
 
     except Exception as e:
         return render(request, 'cmdb/partials/nodes_table.html', {
             'nodes': [],
+            'columns': [],
+            'all_properties': [],
             'label': label,
             'error': str(e)
         })
@@ -527,6 +672,17 @@ def node_create(request, label):
             node_class = DynamicNode.get_or_create_label(label)
             node = node_class(custom_properties=new_props).save()  
 
+            # Create audit log entry
+            node_name = new_props.get('name', '')
+            create_audit_entry(
+                action='create',
+                node_label=label,
+                node_id=node.element_id,
+                node_name=node_name,
+                user=request.user.username if request.user.is_authenticated else 'System',
+                changes=f"Created with properties: {', '.join(new_props.keys())}"
+            )
+
             # Success
             return render(request, 'cmdb/partials/create_success.html', {
                 'message': f"{label} created with ID {node.element_id}"
@@ -554,66 +710,45 @@ def node_connect(request, label, element_id):
         if not rel_type or not target_label or not target_id:
             raise ValueError("Missing relationship details")
 
-        connect_query = f"""
-            MATCH (source:`{label}`) WHERE elementId(source) = $sid
-            MATCH (target:`{target_label}`) WHERE elementId(target) = $tid
-            MERGE (source)-[:`{rel_type}`]->(target)
-            RETURN elementId(source) AS source_id
-        """
-        result, _ = db.cypher_query(connect_query, {'sid': element_id, 'tid': target_id})
-        if not result:
+        # Use helper method to create relationship
+        node_class = DynamicNode.get_or_create_label(label)
+        success = node_class.connect_nodes(element_id, label, rel_type, target_id, target_label)
+        if not success:
             raise ValueError("Failed to create relationship")
 
-        out_rels_query = f"""
-            MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (n)-[r]->(m)
-            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
-                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
-        """
-        out_rels_result, _ = db.cypher_query(out_rels_query, {'eid': element_id})
-
-        out_rels = {}
-        for row in out_rels_result:
-            rel_type = row[0]
-            if rel_type not in out_rels:
-                out_rels[rel_type] = []
-            out_rels[rel_type].append({
-                'target_id': row[1],
-                'target_label': row[2],
-                'target_name': row[3] or row[1][:12] + '...',
-            })
+        # Get updated node and rebuild properties list with relationships
+        node = node_class.get_by_element_id(element_id)
+        if not node:
+            raise ValueError("Source node not found")
+        
+        # Create audit log entry
+        node_name = (node.custom_properties or {}).get('name', '')
+        create_audit_entry(
+            action='connect',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'System',
+            relationship_type=rel_type,
+            target_label=target_label,
+            target_id=target_id
+        )
             
-        # Fetch incoming relationships with Cypher
-        in_rels_query = f"""
-            MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (m)-[r]->(n)
-            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
-                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
-        """
-        in_rels_result, _ = db.cypher_query(in_rels_query, {'eid': element_id})
+        out_rels = node.get_outgoing_relationships()
+        in_rels = node.get_incoming_relationships()
+        # Build properties list using helper function
+        props_list = build_properties_list_with_relationships(node)
 
-        in_rels = {}
-        for row in in_rels_result:
-            rel_type = row[0]
-            if rel_type not in in_rels:
-                in_rels[rel_type] = []
-            in_rels[rel_type].append({
-                'source_id': row[1],
-                'source_label': row[2],
-                'source_name': row[3] or row[1][:12] + '...',
-            })
-
-        return render(request, 'cmdb/partials/node_relationships.html', {
-            'inbound_relationships': in_rels,
-            'outbound_relationships': out_rels,
+        return render(request, 'cmdb/partials/properties_section.html', {
+            'properties_list': props_list,
             'element_id': element_id,
             'label': label,
-            'success_message': f"Relationship '{rel_type}' removed"
+            'success_message': f"Relationship '{rel_type}' created successfully"
         })
     except Exception as e:
-        rels = {}
-        return render(request, 'cmdb/partials/node_relationships.html', {
-            'relationships': rels,
+        # Return error in the properties section
+        return render(request, 'cmdb/partials/properties_section.html', {
+            'properties_list': [],
             'element_id': element_id,
             'label': label,
             'error_message': str(e)
@@ -629,69 +764,46 @@ def node_disconnect(request, label, element_id):
         if not rel_type or not target_id or not target_label:
             raise ValueError("Missing disconnect details")
 
-        disconnect_query = f"""
-            MATCH (source:`{label}`)-[r:`{rel_type}`]->(target:`{target_label}`)
-            WHERE elementId(source) = $sid AND elementId(target) = $tid
-            DELETE r
-            RETURN count(r) AS deleted
-        """
-        result, _ = db.cypher_query(disconnect_query, {'sid': element_id, 'tid': target_id})
-
-        deleted = result[0][0] if result else 0
+        # Use helper method to delete relationship
+        node_class = DynamicNode.get_or_create_label(label)
+        deleted = node_class.disconnect_nodes(element_id, label, rel_type, target_id, target_label)
         if deleted == 0:
             raise ValueError("Relationship not found")
 
-        out_rels_query = f"""
-            MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (n)-[r]->(m)
-            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
-                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
-        """
-        out_rels_result, _ = db.cypher_query(out_rels_query, {'eid': element_id})
-
-        out_rels = {}
-        for row in out_rels_result:
-            rel_type = row[0]
-            if rel_type not in out_rels:
-                out_rels[rel_type] = []
-            out_rels[rel_type].append({
-                'target_id': row[1],
-                'target_label': row[2],
-                'target_name': row[3] or row[1][:12] + '...',
-            })
+        # Get updated node and rebuild properties list with relationships
+        node = node_class.get_by_element_id(element_id)
+        if not node:
+            raise ValueError("Source node not found")
+        
+        # Create audit log entry
+        node_name = (node.custom_properties or {}).get('name', '')
+        create_audit_entry(
+            action='disconnect',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'System',
+            relationship_type=rel_type,
+            target_label=target_label,
+            target_id=target_id
+        )
             
-        # Fetch incoming relationships with Cypher
-        in_rels_query = f"""
-            MATCH (n:`{label}`) WHERE elementId(n) = $eid
-            MATCH (m)-[r]->(n)
-            RETURN type(r) AS rel_type, elementId(m) AS target_id, labels(m)[0] AS target_label,
-                apoc.convert.fromJsonMap(m.custom_properties).name AS target_name
-        """
-        in_rels_result, _ = db.cypher_query(in_rels_query, {'eid': element_id})
+        out_rels = node.get_outgoing_relationships()
+        in_rels = node.get_incoming_relationships()
+        # Build properties list using helper function
+        props_list = build_properties_list_with_relationships(node)
 
-        in_rels = {}
-        for row in in_rels_result:
-            rel_type = row[0]
-            if rel_type not in in_rels:
-                in_rels[rel_type] = []
-            in_rels[rel_type].append({
-                'source_id': row[1],
-                'source_label': row[2],
-                'source_name': row[3] or row[1][:12] + '...',
-            })
-
-        return render(request, 'cmdb/partials/node_relationships.html', {
-            'inbound_relationships': in_rels,
-            'outbound_relationships': out_rels,
+        return render(request, 'cmdb/partials/properties_section.html', {
+            'properties_list': props_list,
             'element_id': element_id,
             'label': label,
-            'success_message': f"Relationship '{rel_type}' removed"
+            'success_message': f"Relationship '{rel_type}' removed successfully"
         })
 
     except Exception as e:
-        rels = {}
-        return render(request, 'cmdb/partials/node_relationships.html', {
-            'relationships': rels,
+        # Return error in the properties section
+        return render(request, 'cmdb/partials/properties_section.html', {
+            'properties_list': [],
             'element_id': element_id,
             'label': label,
             'error_message': str(e)
@@ -707,7 +819,7 @@ def get_target_nodes(request):
         node_class = DynamicNode.get_or_create_label(target_label)
         nodes = node_class.nodes.all()[:50]
 
-        sorted_nodes = sorted(nodes, key=lambda n: n.custom_properties.get('name', n.element_id))
+        sorted_nodes = sorted(nodes, key=lambda n: n.get_property('name', n.element_id))
 
         # Load the partial template manually as string
         template = Template(open('cmdb/templates/cmdb/partials/target_node_options.html').read())
@@ -720,3 +832,53 @@ def get_target_nodes(request):
 
     except Exception as e:
         return HttpResponse(f'<option disabled>Error loading nodes for {target_label}: {str(e)}</option>')
+
+
+@require_http_methods(["GET"])
+def audit_log_list(request):
+    """
+    Global audit log view showing all audit log entries across all nodes.
+    Supports HTMX partial updates
+    """
+    try:
+        # Fetch all audit log entries
+        audit_node_class = DynamicNode.get_or_create_label('AuditLogEntry')
+        audit_nodes = audit_node_class.nodes.all()[:200]  # Limit to latest 200 entries
+        
+        # Extract and sort by timestamp
+        audit_entries = []
+        for node in audit_nodes:
+            props = node.custom_properties or {}
+            audit_entries.append({
+                'element_id': node.element_id,
+                'timestamp': props.get('timestamp', ''),
+                'action': props.get('action', ''),
+                'node_label': props.get('node_label', ''),
+                'node_id': props.get('node_id', ''),
+                'node_name': props.get('node_name', 'Unknown'),
+                'user': props.get('user', 'System'),
+                'changes': props.get('changes', ''),
+                'relationship_type': props.get('relationship_type', ''),
+                'target_label': props.get('target_label', ''),
+                'target_id': props.get('target_id', '')
+            })
+        
+        # Sort by timestamp descending (most recent first)
+        audit_entries.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+    except Exception as e:
+        print(f"Error fetching audit log: {e}")
+        audit_entries = []
+    
+    context = {
+        'audit_entries': audit_entries,
+        'all_labels': TypeRegistry.known_labels(),
+    }
+    
+    # If HTMX request, return content + header for OOB swap
+    if request.htmx:
+        content_html = render_to_string('cmdb/partials/audit_log_content.html', context, request=request)
+        header_html = render_to_string('cmdb/partials/audit_log_header.html', context, request=request)
+        return HttpResponse(content_html + header_html)
+    
+    return render(request, 'cmdb/audit_log_list.html', context)

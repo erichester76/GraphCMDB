@@ -1,0 +1,108 @@
+{% if label == 'Mac_Address' %}
+<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">MAC Address Details</h4>
+
+    {% if error %}
+        <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+            {{ error }}
+        </div>
+    {% else %}
+        <!-- Assigned IP Addresses Section -->
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                </svg>
+                Assigned IP Addresses
+            </h5>
+            {% if custom_data.ip_addresses %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-300 dark:border-gray-600">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Address</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {% for ip in custom_data.ip_addresses %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <a href="{% url 'cmdb:node_detail' ip.label ip.id %}" 
+                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline font-mono text-xs">
+                                        {{ ip.address }}
+                                    </a>
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <span class="px-2 py-1 text-xs rounded-full
+                                        {% if ip.type == 'IPv4' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                                        {% elif ip.type == 'IPv6' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200
+                                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                                        {{ ip.type }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <span class="px-2 py-1 text-xs rounded-full
+                                        {% if ip.status == 'active' or ip.status == 'assigned' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                        {% elif ip.status == 'available' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                                        {% elif ip.status == 'reserved' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                                        {{ ip.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-gray-500 dark:text-gray-400 text-sm italic">No IP addresses assigned to this MAC address</p>
+            {% endif %}
+        </div>
+
+        <!-- Assigned Interface Section -->
+        {% if custom_data.interface %}
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Assigned Interface
+            </h5>
+            <div class="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded border border-cyan-200 dark:border-cyan-800">
+                <p class="text-sm dark:text-gray-100">
+                    <span class="font-medium">Name:</span> 
+                    <a href="{% url 'cmdb:node_detail' custom_data.interface.label custom_data.interface.id %}" 
+                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline font-mono text-xs">
+                        {{ custom_data.interface.name }}
+                    </a>
+                </p>
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">Type:</span> {{ custom_data.interface.type }}
+                </p>
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">Status:</span> 
+                    <span class="px-2 py-1 text-xs rounded-full
+                        {% if custom_data.interface.status == 'up' or custom_data.interface.status == 'active' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                        {% elif custom_data.interface.status == 'down' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                        {{ custom_data.interface.status }}
+                    </span>
+                </p>
+            </div>
+        </div>
+        {% else %}
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Assigned Interface
+            </h5>
+            <p class="text-gray-500 dark:text-gray-400 text-sm italic">Not assigned to any interface</p>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endif %}

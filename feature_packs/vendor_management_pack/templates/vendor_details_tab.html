@@ -1,0 +1,145 @@
+{% if label == 'Vendor' %}
+<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Vendor Details</h4>
+
+    {% if error %}
+        <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+            {{ error }}
+        </div>
+    {% else %}
+        <!-- Contracts Section -->
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Contracts Provided
+            </h5>
+            {% if custom_data.contracts %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-300 dark:border-gray-600">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Contract</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Contract ID</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Period</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Value</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Manager</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {% for contract in custom_data.contracts %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <a href="{% url 'cmdb:node_detail' contract.label contract.id %}" 
+                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                                        {{ contract.name }}
+                                    </a>
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100 font-mono">
+                                    {{ contract.contract_id }}
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    {% if contract.start_date or contract.end_date %}
+                                        {{ contract.start_date|default:"?" }} - {{ contract.end_date|default:"?" }}
+                                    {% else %}
+                                        <span class="text-gray-500 dark:text-gray-400 italic">Not specified</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    {% if contract.value %}
+                                        <span class="font-semibold text-green-700 dark:text-green-400">{{ contract.value }}</span>
+                                    {% else %}
+                                        <span class="text-gray-500 dark:text-gray-400">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    {% if contract.manager %}
+                                        <a href="{% url 'cmdb:node_detail' contract.manager.label contract.manager.id %}" 
+                                           class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                                            {{ contract.manager.name }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-gray-500 dark:text-gray-400 italic">No manager</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    Total: {{ custom_data.contracts|length }} contract{{ custom_data.contracts|length|pluralize }}
+                </div>
+            {% else %}
+                <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
+                    <p class="text-gray-600 dark:text-gray-400 text-sm flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        No contracts associated with this vendor
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Circuits Section -->
+        {% if custom_data.circuits %}
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                Circuits Provided
+            </h5>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-300 dark:border-gray-600">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Circuit</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Circuit ID</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bandwidth</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for circuit in custom_data.circuits %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                <a href="{% url 'cmdb:node_detail' circuit.label circuit.id %}" 
+                                   class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                                    {{ circuit.name }}
+                                </a>
+                            </td>
+                            <td class="px-4 py-3 text-sm dark:text-gray-100 font-mono">
+                                {{ circuit.circuit_id }}
+                            </td>
+                            <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                {% if circuit.bandwidth_mbps > 0 %}
+                                    {{ circuit.bandwidth_mbps }} Mbps
+                                {% else %}
+                                    <span class="text-gray-500 dark:text-gray-400">Unknown</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                <span class="px-2 py-1 text-xs rounded-full
+                                    {% if circuit.status == 'active' or circuit.status == 'up' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                    {% elif circuit.status == 'inactive' or circuit.status == 'down' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                    {% elif circuit.status == 'disabled' %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
+                                    {% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}">
+                                    {{ circuit.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Total: {{ custom_data.circuits|length }} circuit{{ custom_data.circuits|length|pluralize }}
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endif %}

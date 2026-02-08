@@ -12,6 +12,12 @@
     "required": [
       "name"
     ],
+    "columns": [
+      "name",
+      "speed_mbps",
+      "status",
+      "duplex"
+    ],
     "relationships": {
       "LOCATED_ON": {
         "target": "Device",
@@ -30,6 +36,11 @@
     ],
     "required": [
       "type"
+    ],
+    "columns": [
+      "type",
+      "length_meters",
+      "status"
     ],
     "relationships": {
       "CONNECTS": {
@@ -52,6 +63,12 @@
       "name",
       "circuit_id",
       "bandwidth_mbps"
+    ],
+    "columns": [
+      "name",
+      "circuit_id",
+      "bandwidth_mbps",
+      "status"
     ],
     "relationships": {
       "TERMINATES_AT": {
@@ -76,6 +93,11 @@
     "required": [
       "vlan_id",
       "name"
+    ],
+    "columns": [
+      "vlan_id",
+      "name",
+      "status"
     ],
     "relationships": {
 

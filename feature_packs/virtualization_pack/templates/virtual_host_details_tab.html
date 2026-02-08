@@ -1,0 +1,52 @@
+{% if label == 'Virtual_Host' %}
+<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Virtual Host Details</h4>
+
+    {% if error %}
+        <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+            {{ error }}
+        </div>
+    {% else %}
+        <!-- Physical Device Section -->
+        {% if custom_data.device %}
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+                </svg>
+                Physical Device
+            </h5>
+            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded border border-blue-200 dark:border-blue-800">
+                <p class="text-sm dark:text-gray-100">
+                    <span class="font-medium">Device:</span> 
+                    <a href="{% url 'cmdb:node_detail' custom_data.device.label custom_data.device.id %}" 
+                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                        {{ custom_data.device.name }}
+                    </a>
+                </p>
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">Type:</span> {{ custom_data.device.type }}
+                </p>
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">Status:</span> 
+                    <span class="px-2 py-1 text-xs rounded-full
+                        {% if custom_data.device.status == 'active' or custom_data.device.status == 'online' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                        {% elif custom_data.device.status == 'maintenance' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                        {% elif custom_data.device.status == 'offline' or custom_data.device.status == 'inactive' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                        {{ custom_data.device.status }}
+                    </span>
+                </p>
+                {% if custom_data.device.location %}
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">Location:</span> {{ custom_data.device.location }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+            <p class="text-gray-500 dark:text-gray-400 text-sm italic">No physical device information available for this virtual host</p>
+        {% endif %}
+    {% endif %}
+</div>
+{% endif %}
