@@ -1,5 +1,5 @@
 {% load cmdb_extras %}
-<div x-data="paginationManager({{ page }}, {{ per_page }}, {{ total_count }}, {{ total_pages }}, '{{ label|escapejs }}')">>
+<div x-data="paginationManager({{ page }}, {{ per_page }}, {{ total_count }}, {{ total_pages }}, '{{ label|escapejs }}')">
 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700" 
        x-data="{ 
            sortColumn: null,
@@ -228,13 +228,13 @@ function paginationManager(initialPage, initialPerPage, initialTotalCount, initi
             if (this.totalPages === 0 || page < 1 || page > this.totalPages || page === this.currentPage) return;
             
             // Use HTMX to fetch the new page
-            const url = `/cmdb/nodes/${this.label}/?page=${page}&per_page=${this.perPage}`;
+            const url = `/cmdb/${this.label}/?page=${page}&per_page=${this.perPage}`;
             htmx.ajax('GET', url, {target: '#nodes-content', swap: 'innerHTML'});
         },
         
         changePerPage() {
             // Reset to page 1 when changing per page
-            const url = `/cmdb/nodes/${this.label}/?page=1&per_page=${this.perPage}`;
+            const url = `/cmdb/${this.label}/?page=1&per_page=${this.perPage}`;
             htmx.ajax('GET', url, {target: '#nodes-content', swap: 'innerHTML'});
         }
     };
