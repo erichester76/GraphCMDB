@@ -80,6 +80,8 @@
 </table>
 
 <!-- Edit Modal (placeholder - filled by HTMX) -->
-<dialog id="edit-modal" class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full">
+<dialog id="edit-modal" 
+        class="p-6 rounded-lg shadow-xl max-w-lg w-full backdrop:bg-black backdrop:bg-opacity-50"
+        :class="darkMode ? 'dark bg-gray-800 text-white' : 'bg-white'">
     <div id="edit-modal-content"></div>
 </dialog>
