@@ -71,8 +71,9 @@ def virtual_machine_details_tab(request, label, element_id):
 def virtual_host_details_tab(request, label, element_id):
     """
     Context builder for Virtual Host Details tab.
-    Shows physical device (HOSTED_ON outgoing to Device),
-    and virtual machines it's hosting (HOSTED_ON incoming from Virtual_Machine).
+    Shows physical device (HOSTED_ON outgoing to Device).
+    Note: Virtual_Machine nodes connect to Virtual_Cluster, not Virtual_Host,
+    so VM hosting relationships are shown at the cluster level.
     Returns context dictionary rather than rendering template directly.
     """
     context = {
@@ -80,8 +81,7 @@ def virtual_host_details_tab(request, label, element_id):
         'element_id': element_id,
         'node': None,
         'custom_data': {
-            'device': None,
-            'virtual_machines': []
+            'device': None
         },
         'error': None,
     }
@@ -126,17 +126,6 @@ def virtual_host_details_tab(request, label, element_id):
                 'status': row[4],
                 'location': row[5]
             }
-
-        # Fetch virtual machines hosted on this host (incoming HOSTED_ON from Virtual_Machine)
-        # Note: Virtual_Machine -> HOSTED_ON -> Virtual_Cluster, not Virtual_Host
-        # So we need to check if Virtual_Machine has relationship to Virtual_Host
-        # Based on the types.json, Virtual_Machine only connects to Virtual_Cluster
-        # But for Virtual_Host, we might want to show VMs through cluster relationship
-        # Let's try to find VMs through a cluster that might be related
-        # Actually, let's check if there's a direct relationship pattern
-        
-        # Since types.json doesn't show direct VM->Host relationship,
-        # we'll leave this empty for now but keep the structure
 
     except Exception as e:
         context['error'] = str(e)
