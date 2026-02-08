@@ -41,7 +41,7 @@ def parse_property_definition(prop_def):
             'name': prop_def.get('name', ''),
             'choices': prop_def.get('choices', None)
         }
-    return {'name': '', 'choices': None}
+    raise TypeError(f"Property definition must be a string or dict, got {type(prop_def).__name__}")
 
 def build_properties_list_with_relationships(node):
     """
