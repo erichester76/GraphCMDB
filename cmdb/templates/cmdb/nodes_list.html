@@ -8,7 +8,8 @@
 {% block header_actions %}
     <div class="flex items-center gap-4" 
          x-data="listViewManager('{{ label }}', {{ columns_json }}, {{ all_properties_json }})"
-         @htmx:after-swap.window="$el.closest('[x-data]').__x && $el.closest('[x-data]').__x.$data.initFromStorage()">
+         @htmx:after-swap.window="$el.closest('[x-data]').__x && $el.closest('[x-data]').__x.$data.initFromStorage()"
+         @sort-column.window="sortBy($event.detail.column)">
         
         <!-- Column Selector -->
         <div class="relative" @click.away="dropdownOpen = false">
@@ -161,11 +162,6 @@ function listViewManager(label, defaultColumns, allProperties) {
             this.$nextTick(() => {
                 this.applyColumnVisibility();
             });
-            
-            // Listen for sort events from table
-            this.$el.addEventListener('sort-column', (e) => {
-                this.sortBy(e.detail.column);
-            });
         },
         
         initFromStorage() {
@@ -256,19 +252,11 @@ function listViewManager(label, defaultColumns, allProperties) {
             const rows = Array.from(tbody.querySelectorAll('.node-row'));
             
             rows.sort((a, b) => {
-                let aValue, bValue;
-                
-                if (this.sortColumn === 'id') {
-                    // Sort by ID column
-                    aValue = a.querySelector('td:first-child')?.textContent.trim() || '';
-                    bValue = b.querySelector('td:first-child')?.textContent.trim() || '';
-                } else {
-                    // Sort by data column
-                    const aCell = a.querySelector(`td[data-column="${this.sortColumn}"]`);
-                    const bCell = b.querySelector(`td[data-column="${this.sortColumn}"]`);
-                    aValue = aCell?.textContent.trim() || '';
-                    bValue = bCell?.textContent.trim() || '';
-                }
+                // Sort by data-column attribute for all columns including ID
+                const aCell = a.querySelector(`td[data-column="${this.sortColumn}"]`);
+                const bCell = b.querySelector(`td[data-column="${this.sortColumn}"]`);
+                const aValue = aCell?.textContent.trim() || '';
+                const bValue = bCell?.textContent.trim() || '';
                 
                 // Handle empty values
                 if (!aValue && !bValue) return 0;

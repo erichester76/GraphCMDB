@@ -7,7 +7,8 @@
     <div class="flex items-center gap-4" 
          x-data="listViewManager('{{ label }}', {{ columns_json }}, {{ all_properties_json }})"
          x-init="console.log('Alpine init for:', label, 'columns:', availableColumns); init();"
-         @htmx:after-swap.window="$el.closest('[x-data]').__x && $el.closest('[x-data]').__x.$data.initFromStorage()">
+         @htmx:after-swap.window="$el.closest('[x-data]').__x && $el.closest('[x-data]').__x.$data.initFromStorage()"
+         @sort-column.window="sortBy($event.detail.column)">
         
         <!-- Column Selector -->
         <div class="relative" @click.away="dropdownOpen = false">
