@@ -37,6 +37,8 @@ A Django-based Configuration Management Database (CMDB) using Neo4j graph databa
    
    This is the most important step! You need an admin user to log in and manage the system.
    
+   > 📖 **Can't login? Need help?** See [FIRST_ADMIN_SETUP.md](FIRST_ADMIN_SETUP.md) for a detailed visual guide!
+   
    **Option 1: Interactive (Recommended)**
    ```bash
    python manage.py createsuperuser
