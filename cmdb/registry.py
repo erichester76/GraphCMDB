@@ -12,13 +12,19 @@ class TypeRegistry:
 
     @classmethod
     def get_metadata(cls, label: str) -> Dict[str, Any]:
-        return cls._types.get(label, {
+        metadata = cls._types.get(label, {
             'display_name': label,
             'description': 'No description',
             'required': [],
             'properties': [],
             'relationships': {},
+            'columns': [],
         })
+        # If no columns specified, use first 5 properties as default
+        if 'columns' not in metadata or not metadata['columns']:
+            properties = metadata.get('properties', [])
+            metadata['columns'] = properties[:5] if properties else []
+        return metadata
 
     @classmethod
     def get_categories(cls):

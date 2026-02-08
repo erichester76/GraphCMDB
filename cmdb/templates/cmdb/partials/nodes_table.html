@@ -1,8 +1,16 @@
+{% load cmdb_extras %}
 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
     <thead class="bg-gray-50 dark:bg-gray-700">
         <tr>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Properties</th>
+            {% for property in all_properties %}
+            <th scope="col" 
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider column-{{ property }}"
+                data-column="{{ property }}"
+                style="{% if property not in columns %}display: none;{% endif %}">
+                {{ property|title }}
+            </th>
+            {% endfor %}
             <th scope="col" class="relative px-6 py-3">
                 <span class="sr-only">Actions</span>
             </th>
@@ -10,17 +18,21 @@
     </thead>
     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
         {% for node in nodes %}
-        <tr>
+        <tr class="node-row" data-node-id="{{ node.element_id }}">
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                {{ node.element_id }}
+                {{ node.element_id|truncatechars:12 }}
             </td>
-            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                {% if node.display_name %}
-                    {{ node.display_name }}
+            {% for property in all_properties %}
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 column-{{ property }}" 
+                data-column="{{ property }}"
+                style="{% if property not in columns %}display: none;{% endif %}">
+                {% if node.columns|get_item:property %}
+                    {{ node.columns|get_item:property }}
                 {% else %}
-                    <span class="text-gray-500 dark:text-gray-400 italic">No properties</span>
+                    <span class="text-gray-400 dark:text-gray-500 italic">-</span>
                 {% endif %}
             </td>
+            {% endfor %}
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <a href="{% url 'cmdb:node_detail' label node.element_id %}" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 mr-3">Detail</a>
                 <button 
@@ -36,7 +48,7 @@
         </tr>
         {% empty %}
         <tr>
-            <td colspan="3" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+            <td colspan="{{ all_properties|length|add:2 }}" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                 No {{ label }} nodes found
             </td>
         </tr>
