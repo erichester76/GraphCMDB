@@ -131,21 +131,6 @@
                         </div>
                     {% endfor %}
                 </div>
-
-                <!-- Register New Type -->
-                <a href="{% url 'cmdb:type_register' %}"
-                   hx-get="{% url 'cmdb:type_register' %}"
-                   hx-target="#main-content"
-                   hx-swap="innerHTML"
-                   hx-push-url="true"
-                   hx-indicator="#main-content .htmx-indicator"
-                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md mt-4"
-                   :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'">
-                    <svg class="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Register New Type
-                </a>
                 
                 <a href="{% url 'cmdb:feature_pack_list' %}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md"
