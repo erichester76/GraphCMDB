@@ -81,8 +81,9 @@
 </table>
 
 <!-- Pagination Controls -->
-<div class="bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
-    <div class="flex-1 flex justify-between sm:hidden">
+<div class="bg-white dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700 sm:px-6">
+    <!-- Mobile: Simple Previous/Next -->
+    <div class="flex justify-between sm:hidden mb-4">
         <button 
             @click="goToPage(currentPage - 1)"
             :disabled="currentPage <= 1"
@@ -94,12 +95,15 @@
             @click="goToPage(currentPage + 1)"
             :disabled="currentPage >= totalPages"
             :class="currentPage >= totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
-            class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800">
+            class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800">
             Next
         </button>
     </div>
-    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-        <div class="flex items-center gap-4">
+    
+    <!-- Pagination Info and Controls - Visible on ALL screens -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <!-- Left side: Range display and per-page selector -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
             <p class="text-sm text-gray-700 dark:text-gray-300">
                 Showing
                 <span class="font-medium" x-text="startItem"></span>
@@ -123,7 +127,9 @@
                 </select>
             </div>
         </div>
-        <div>
+        
+        <!-- Right side: Page navigation (desktop only) -->
+        <div class="hidden sm:block">
             <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                 <!-- First Page -->
                 <button 
