@@ -89,11 +89,11 @@ class NodeViewSet(viewsets.ViewSet):
         
         Query Parameters:
             - limit: Max number of results (default: 100)
-            - skip: Number of results to skip for pagination (default: 0)
+            - offset: Number of results to skip for pagination (default: 0)
         """
         try:
             limit = int(request.query_params.get('limit', 100))
-            skip = int(request.query_params.get('skip', 0))
+            offset = int(request.query_params.get('offset', 0))
             
             # Validate label exists
             if label not in TypeRegistry.known_labels():
@@ -103,7 +103,7 @@ class NodeViewSet(viewsets.ViewSet):
                 }, status=status.HTTP_404_NOT_FOUND)
             
             node_class = DynamicNode.get_or_create_label(label)
-            nodes = node_class.nodes.all()[skip:skip + limit]
+            nodes = node_class.nodes.all()[offset:offset + limit]
             
             serializer = NodeSerializer(nodes, many=True)
             return Response({
@@ -112,7 +112,7 @@ class NodeViewSet(viewsets.ViewSet):
                 'nodes': serializer.data,
                 'count': len(serializer.data),
                 'limit': limit,
-                'skip': skip
+                'offset': offset
             })
         except Exception as e:
             return Response({

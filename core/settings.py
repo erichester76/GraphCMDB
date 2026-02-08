@@ -12,11 +12,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',             # Django REST Framework
+    'rest_framework',            # Django REST Framework
     'django_htmx',
-    'graphene_django',          # GraphQL support
-    'cmdb.apps.CmdbConfig',     # our app
-    'core.apps.CoreConfig',     # core app with feature pack loading
+    'graphene_django',           # GraphQL support
+    'cmdb.apps.CmdbConfig',      # our app
+    'core.apps.CoreConfig',      # core app with feature pack loading
 ]
 
 MIDDLEWARE = [
