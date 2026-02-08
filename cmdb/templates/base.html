@@ -56,6 +56,20 @@
                     Dashboard
                 </a>
 
+                <a href="{% url 'cmdb:audit_log_list' %}"
+                   hx-get="{% url 'cmdb:audit_log_list' %}"
+                   hx-target="#main-content"
+                   hx-swap="innerHTML"
+                   hx-push-url="true"
+                   hx-indicator="#main-content .htmx-indicator"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md"
+                   :class="darkMode ? ('{% if request.resolver_match.url_name == "audit_log_list" %}bg-indigo-600 text-white{% else %}text-gray-300 hover:bg-gray-700{% endif %}') : ('{% if request.resolver_match.url_name == "audit_log_list" %}bg-indigo-50 text-indigo-700{% else %}text-gray-700 hover:bg-gray-50{% endif %}')">
+                    <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Audit Log
+                </a>
+
                 <a href="{% url 'cmdb:feature_pack_list' %}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md"
                    :class="darkMode ? ('{% if request.resolver_match.url_name == "feature_pack_list" %}bg-indigo-600 text-white{% else %}text-gray-300 hover:bg-gray-700{% endif %}') : ('{% if request.resolver_match.url_name == "feature_pack_list" %}bg-indigo-50 text-indigo-700{% else %}text-gray-700 hover:bg-gray-50{% endif %}')">

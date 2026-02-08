@@ -12,6 +12,20 @@ from django.template import Context, Template
 from django.conf import settings
 import importlib
 
+# Import audit log utility if available
+try:
+    import sys
+    import os
+    # Add feature_packs to sys.path if not already there
+    feature_packs_path = os.path.join(settings.BASE_DIR, 'feature_packs')
+    if feature_packs_path not in sys.path:
+        sys.path.insert(0, feature_packs_path)
+    from audit_log_pack.views import create_audit_entry
+except ImportError:
+    # If audit log pack is not available, use a no-op function
+    def create_audit_entry(*args, **kwargs):
+        pass
+
 def build_properties_list_with_relationships(node):
     """
     Helper function to build a properties list that includes both regular properties
@@ -310,7 +324,10 @@ def node_detail(request, label, element_id):
 
         feature_pack_tabs = []
         for tab in getattr(settings, 'FEATURE_PACK_TABS', []):
-            if label in tab.get('for_labels', []):
+            # Check if tab applies to this label
+            # Empty for_labels means apply to all labels
+            tab_for_labels = tab.get('for_labels', [])
+            if not tab_for_labels or label in tab_for_labels:
                 tab_copy = tab.copy()
                 # Set default tab_order if not specified
                 # Tab ordering: 0 = first (before Core Details), 1 = Core Details, 2+ = after Core Details
@@ -441,9 +458,22 @@ def node_edit(request, label, element_id):
 
         # Merge with existing
         current = node.custom_properties or {}
+        old_props = current.copy()
         current.update(new_props)
         node.custom_properties = current
         node.save()
+
+        # Create audit log entry
+        node_name = current.get('name', '')
+        changed_keys = [k for k in new_props.keys() if old_props.get(k) != new_props.get(k)]
+        create_audit_entry(
+            action='update',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'System',
+            changes=f"Updated properties: {', '.join(changed_keys)}" if changed_keys else "Properties updated"
+        )
 
         return render(request, 'cmdb/partials/edit_success.html', {
             'message': 'Node updated successfully'
@@ -469,6 +499,19 @@ def node_delete(request, label, element_id):
         node = node_class.get_by_element_id(element_id)
         if not node:
             return JsonResponse({'error': 'Node not found'}, status=404)
+
+        # Store node info before deleting for audit log
+        node_name = (node.custom_properties or {}).get('name', '')
+        
+        # Create audit log entry before deletion
+        create_audit_entry(
+            action='delete',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'System',
+            changes='Node deleted'
+        )
 
         node.delete()
 
@@ -629,6 +672,17 @@ def node_create(request, label):
             node_class = DynamicNode.get_or_create_label(label)
             node = node_class(custom_properties=new_props).save()  
 
+            # Create audit log entry
+            node_name = new_props.get('name', '')
+            create_audit_entry(
+                action='create',
+                node_label=label,
+                node_id=node.element_id,
+                node_name=node_name,
+                user=request.user.username if request.user.is_authenticated else 'System',
+                changes=f"Created with properties: {', '.join(new_props.keys())}"
+            )
+
             # Success
             return render(request, 'cmdb/partials/create_success.html', {
                 'message': f"{label} created with ID {node.element_id}"
@@ -667,6 +721,21 @@ def node_connect(request, label, element_id):
         if not node:
             raise ValueError("Source node not found")
         
+        # Create audit log entry
+        node_name = (node.custom_properties or {}).get('name', '')
+        create_audit_entry(
+            action='connect',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'System',
+            relationship_type=rel_type,
+            target_label=target_label,
+            target_id=target_id
+        )
+            
+        out_rels = node.get_outgoing_relationships()
+        in_rels = node.get_incoming_relationships()
         # Build properties list using helper function
         props_list = build_properties_list_with_relationships(node)
 
@@ -706,6 +775,21 @@ def node_disconnect(request, label, element_id):
         if not node:
             raise ValueError("Source node not found")
         
+        # Create audit log entry
+        node_name = (node.custom_properties or {}).get('name', '')
+        create_audit_entry(
+            action='disconnect',
+            node_label=label,
+            node_id=element_id,
+            node_name=node_name,
+            user=request.user.username if request.user.is_authenticated else 'System',
+            relationship_type=rel_type,
+            target_label=target_label,
+            target_id=target_id
+        )
+            
+        out_rels = node.get_outgoing_relationships()
+        in_rels = node.get_incoming_relationships()
         # Build properties list using helper function
         props_list = build_properties_list_with_relationships(node)
 
@@ -748,3 +832,53 @@ def get_target_nodes(request):
 
     except Exception as e:
         return HttpResponse(f'<option disabled>Error loading nodes for {target_label}: {str(e)}</option>')
+
+
+@require_http_methods(["GET"])
+def audit_log_list(request):
+    """
+    Global audit log view showing all audit log entries across all nodes.
+    Supports HTMX partial updates
+    """
+    try:
+        # Fetch all audit log entries
+        audit_node_class = DynamicNode.get_or_create_label('AuditLogEntry')
+        audit_nodes = audit_node_class.nodes.all()[:200]  # Limit to latest 200 entries
+        
+        # Extract and sort by timestamp
+        audit_entries = []
+        for node in audit_nodes:
+            props = node.custom_properties or {}
+            audit_entries.append({
+                'element_id': node.element_id,
+                'timestamp': props.get('timestamp', ''),
+                'action': props.get('action', ''),
+                'node_label': props.get('node_label', ''),
+                'node_id': props.get('node_id', ''),
+                'node_name': props.get('node_name', 'Unknown'),
+                'user': props.get('user', 'System'),
+                'changes': props.get('changes', ''),
+                'relationship_type': props.get('relationship_type', ''),
+                'target_label': props.get('target_label', ''),
+                'target_id': props.get('target_id', '')
+            })
+        
+        # Sort by timestamp descending (most recent first)
+        audit_entries.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+    except Exception as e:
+        print(f"Error fetching audit log: {e}")
+        audit_entries = []
+    
+    context = {
+        'audit_entries': audit_entries,
+        'all_labels': TypeRegistry.known_labels(),
+    }
+    
+    # If HTMX request, return content + header for OOB swap
+    if request.htmx:
+        content_html = render_to_string('cmdb/partials/audit_log_content.html', context, request=request)
+        header_html = render_to_string('cmdb/partials/audit_log_header.html', context, request=request)
+        return HttpResponse(content_html + header_html)
+    
+    return render(request, 'cmdb/audit_log_list.html', context)
