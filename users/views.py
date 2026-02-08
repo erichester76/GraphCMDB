@@ -39,9 +39,10 @@ def user_profile(request):
     # Try to find user node in graph
     user_node = None
     try:
+        # Use exact matching on username property in JSON
         query = """
             MATCH (u:User)
-            WHERE u.custom_properties CONTAINS $username
+            WHERE apoc.convert.fromJsonMap(u.custom_properties).username = $username
             RETURN elementId(u) AS user_id, u.custom_properties AS props
             LIMIT 1
         """
@@ -131,7 +132,7 @@ def user_list(request):
         messages.error(request, 'You do not have permission to view this page.')
         return redirect('cmdb:dashboard')
     
-    users = User.objects.all().select_related().prefetch_related('groups')
+    users = User.objects.all().prefetch_related('groups')
     context = {
         'users': users,
     }
