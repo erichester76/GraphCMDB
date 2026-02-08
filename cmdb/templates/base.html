@@ -145,20 +145,14 @@
                         </div>
                     {% endfor %}
                 </div>
-
-                <!-- Register New Type -->
-                <a href="{% url 'cmdb:type_register' %}"
-                   hx-get="{% url 'cmdb:type_register' %}"
-                   hx-target="#main-content"
-                   hx-swap="innerHTML"
-                   hx-push-url="true"
-                   hx-indicator="#main-content .htmx-indicator"
-                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md mt-4"
-                   :class="darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'">
+                
+                <a href="{% url 'cmdb:feature_pack_list' %}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md"
+                   :class="darkMode ? ('{% if request.resolver_match.url_name == "feature_pack_list" %}bg-indigo-600 text-white{% else %}text-gray-300 hover:bg-gray-700{% endif %}') : ('{% if request.resolver_match.url_name == "feature_pack_list" %}bg-indigo-50 text-indigo-700{% else %}text-gray-700 hover:bg-gray-50{% endif %}')">
                     <svg class="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                     </svg>
-                    Register New Type
+                    Feature Packs
                 </a>
             </nav>
         </aside>
@@ -167,7 +161,7 @@
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Top bar -->
             <header class="shadow-sm" :class="darkMode ? 'bg-gray-800' : 'bg-white'">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="py-4 flex items-center gap-4">
                         <!-- Far left: Hamburger menu -->
                         <button @click="sidebarOpen = !sidebarOpen; localStorage.setItem('sidebarOpen', sidebarOpen)"
@@ -211,7 +205,7 @@
 
             <!-- Page content -->
             <main class="flex-1 overflow-y-auto" :class="darkMode ? 'bg-gray-900' : 'bg-gray-50'">
-                <div id="main-content" class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 relative">
+                <div id="main-content" class="mx-auto py-6 px-4 sm:px-6 lg:px-8 relative">
                     <!-- Loading indicator (shows during HTMX requests) -->
                     <div class="htmx-indicator absolute inset-0 flex items-center justify-center bg-opacity-75 z-10 hidden"
                          :class="darkMode ? 'bg-gray-900' : 'bg-gray-50'">
@@ -236,7 +230,7 @@
             role="dialog"
             aria-label="Create new item"
             class="p-6 rounded-lg shadow-xl max-w-lg w-full backdrop:bg-black backdrop:bg-opacity-50"
-            :class="darkMode ? 'bg-gray-800 text-white' : 'bg-white'">
+            :class="darkMode ? 'dark bg-gray-800 text-white' : 'bg-white'">
         <div id="create-modal-content"></div>
     </dialog>
 

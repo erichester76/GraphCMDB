@@ -2,39 +2,104 @@
 <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
     <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Rack Elevation Diagram</h4>
 
-    {% if custom_data %}
+    {% if custom_data.error %}
+        <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+            {{ custom_data.error }}
+        </div>
+    {% elif custom_data.rack_units %}
         <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
-            Total Height: {{ custom_data|length }} U
+            Total Height: {{ custom_data.rack_units|length }} U
         </p>
 
-            <div class="mx-auto max-w-[400px] border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 p-2 max-h-[600px] overflow-y-auto shadow-inner">
-                {% for unit in custom_data %}
-                 <div class="rack-unit flex items-center justify-between h-10 border-b border-gray-200 dark:border-gray-700 px-4 text-sm {% cycle 'bg-amber-50 dark:bg-amber-950' 'bg-gray-100 dark:bg-gray-800' %}">
-                    <span class="font-medium min-w-[60px]">U{{ unit.number }}</span>
-
-                    {% if unit.device %}
-                        <a href="{% url 'cmdb:node_detail' unit.device.target_label unit.device.target_id %}" 
-                           class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
-                            {{ unit.device.target_name|default:unit.device.target_id|truncatechars:30 }}
-                        </a>
+        <!-- Two-column layout: 12% properties/relationships, 88% rack views -->
+        <div class="flex gap-3">
+            <!-- Left column: Properties and Relationships (12%) -->
+            <div class="w-[12%] space-y-4">
+                <!-- Properties Section -->
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                    <h5 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Properties</h5>
+                    {% if custom_data.properties %}
+                        <div class="space-y-1">
+                            {% for prop in custom_data.properties %}
+                                <div class="text-xs">
+                                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ prop.key }}:</span>
+                                    <span class="text-gray-900 dark:text-gray-100 break-words">{{ prop.value }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
                     {% else %}
-                        <span class="text-gray-500 dark:text-gray-400 italic">Empty</span>
-                    {% endif %}
-
-                    {% if unit.status %}
-                        <span class="text-xs text-gray-500 dark:text-gray-400 ml-4">({{ unit.status }})</span>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm italic">No properties</p>
                     {% endif %}
                 </div>
-            {% endfor %}
+
+                <!-- Location Hierarchy Section -->
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                    <h5 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Location</h5>
+                    {% if custom_data.location_chain %}
+                        <div class="space-y-1">
+                            {% for location in custom_data.location_chain %}
+                                <div class="text-xs flex items-center">
+                                    <span class="text-gray-600 dark:text-gray-400 mr-1">→</span>
+                                    <a href="{% url 'cmdb:node_detail' location.label location.id %}" 
+                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate">
+                                        {{ location.label }}: {{ location.name }}
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-gray-500 dark:text-gray-400 text-xs italic">No location</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right column: Front and Back Rack Views (88% total, 44% each) -->
+            <div class="w-[88%] flex gap-3">
+                <!-- Front View (44% of total width) -->
+                <div class="w-1/2">
+                    <h5 class="text-base font-semibold text-gray-800 dark:text-gray-200 mb-2 text-center">Front</h5>
+                    <div class="border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 p-2 max-h-[calc(100vh-16rem)] overflow-y-auto shadow-inner">
+                        {% for unit in custom_data.rack_units %}
+                            <div class="rack-unit flex items-center justify-between h-8 border-b border-gray-200 dark:border-gray-700 px-3 text-sm {% cycle 'bg-amber-50 dark:bg-amber-950' 'bg-gray-100 dark:bg-gray-800' %}">
+                                <span class="font-medium min-w-[50px]">U{{ unit.number }}</span>
+
+                                {% if unit.device %}
+                                    <a href="{% url 'cmdb:node_detail' unit.device.target_label unit.device.target_id %}" 
+                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate flex-1 text-center">
+                                        {{ unit.device.target_name|default:unit.device.target_id|truncatechars:50 }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-gray-500 dark:text-gray-400 italic flex-1 text-center">Empty</span>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Back View (44% of total width) -->
+                <div class="w-1/2">
+                    <h5 class="text-base font-semibold text-gray-800 dark:text-gray-200 mb-2 text-center">Back</h5>
+                    <div class="border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 p-2 max-h-[calc(100vh-16rem)] overflow-y-auto shadow-inner">
+                        {% for unit in custom_data.rack_units %}
+                            <div class="rack-unit flex items-center justify-between h-8 border-b border-gray-200 dark:border-gray-700 px-3 text-sm {% cycle 'bg-amber-50 dark:bg-amber-950' 'bg-gray-100 dark:bg-gray-800' %}">
+                                <span class="font-medium min-w-[50px]">U{{ unit.number }}</span>
+
+                                {% if unit.device %}
+                                    <a href="{% url 'cmdb:node_detail' unit.device.target_label unit.device.target_id %}" 
+                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate flex-1 text-center">
+                                        {{ unit.device.target_name|default:unit.device.target_id|truncatechars:50 }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-gray-500 dark:text-gray-400 italic flex-1 text-center">Empty</span>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
         </div>
     {% else %}
-        {% if error %}
-            <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
-                {{ error }}
-            </div>
-        {% else %}
-            <p class="text-gray-500 dark:text-gray-400 text-center py-8">No rack units defined or height not set</p>
-        {% endif %}
+        <p class="text-gray-500 dark:text-gray-400 text-center py-8">No rack units defined or height not set</p>
     {% endif %}
 </div>
 {% endif %}

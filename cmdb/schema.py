@@ -49,11 +49,6 @@ class DynamicNodeType(ObjectType):
                     ]
         return rels
 
-
-# ────────────────────────────────────────────────────────────────
-# Generic Queries (unchanged from previous version)
-# ────────────────────────────────────────────────────────────────
-
 class Query(ObjectType):
     nodes_by_label = List(
         DynamicNodeType,
@@ -182,11 +177,6 @@ class DeleteNode(Mutation):
         except Exception as e:
             return DeleteNode(success=False, message=str(e))
 
-
-# ────────────────────────────────────────────────────────────────
-# Generic Relationship Mutations – NEW
-# ────────────────────────────────────────────────────────────────
-
 class ConnectNodes(Mutation):
     """
     Create a relationship between two existing nodes.
@@ -280,11 +270,6 @@ class Mutation(ObjectType):
     delete_node     = DeleteNode.Field()
     connect_nodes   = ConnectNodes.Field()
     disconnect_nodes = DisconnectNodes.Field()
-
-
-# ────────────────────────────────────────────────────────────────
-# Schema
-# ────────────────────────────────────────────────────────────────
 
 schema = graphene.Schema(
     query=Query,
