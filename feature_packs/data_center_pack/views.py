@@ -11,6 +11,8 @@ def rack_elevation_tab(request, label, element_id):
         'element_id': element_id,
         'node': None,
         'custom_data': [],
+        'properties': [],
+        'location_chain': [],
         'error': None,
     }
 
@@ -23,6 +25,44 @@ def rack_elevation_tab(request, label, element_id):
             return context  # ← return dict, not render
 
         context['node'] = node
+
+        # Build properties list
+        custom_props = node.custom_properties or {}
+        props_list = []
+        for key, value in custom_props.items():
+            props_list.append({
+                'key': key,
+                'value': value,
+                'value_type': type(value).__name__,
+            })
+        context['properties'] = props_list
+
+        # Follow LOCATED_IN relationships to get location hierarchy
+        location_query = f"""
+            MATCH (n:`{label}`) WHERE elementId(n) = $eid
+            OPTIONAL MATCH path = (n)-[:LOCATED_IN*]->(location)
+            WITH n, location, 
+                 apoc.convert.fromJsonMap(location.custom_properties) AS loc_props,
+                 labels(location)[0] AS loc_label,
+                 elementId(location) AS loc_id,
+                 length(path) AS depth
+            RETURN loc_label, loc_id, 
+                   COALESCE(loc_props.name, 'Unnamed') AS loc_name,
+                   depth
+            ORDER BY depth ASC
+        """
+        location_result, _ = db.cypher_query(location_query, {'eid': element_id})
+        
+        location_chain = []
+        for row in location_result:
+            if row[0]:  # If there's a label
+                location_chain.append({
+                    'label': row[0],
+                    'id': row[1],
+                    'name': row[2],
+                    'depth': row[3],
+                })
+        context['location_chain'] = location_chain
 
         # Get height_units
         height = node.get_property('height', 0)
