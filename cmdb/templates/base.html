@@ -61,7 +61,7 @@
                     activeLabel: '{{ request.resolver_match.kwargs.label|default:'' }}',
                     openCategories: {
                         {% for category, labels in categories.items %}
-                            '{{ category }}': {{ 'true' if request.resolver_match.kwargs.label in labels else 'false' }}{% if not forloop.last %},{% endif %}
+                            '{{ category }}': {% if request.resolver_match.kwargs.label in labels %}true{% else %}false{% endif %}{% if not forloop.last %},{% endif %}
                         {% endfor %}
                     }
                 }">
