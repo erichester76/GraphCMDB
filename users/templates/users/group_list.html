@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Groups - Graph CMDB{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-6 flex items-center justify-between">
+        <h2 class="text-2xl font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
+            Groups (Roles)
+        </h2>
+        <a href="{% url 'admin:auth_group_add' %}" 
+           class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+            Add Group
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for group in groups %}
+        <div class="rounded-lg p-6" :class="darkMode ? 'bg-gray-800' : 'bg-white shadow'">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                    {{ group.name }}
+                </h3>
+                <a href="{% url 'admin:auth_group_change' group.id %}" 
+                   class="text-sm hover:underline"
+                   :class="darkMode ? 'text-blue-400' : 'text-blue-600'">
+                    Edit
+                </a>
+            </div>
+            
+            <dl class="space-y-2">
+                <div>
+                    <dt class="text-xs font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                        Members
+                    </dt>
+                    <dd class="mt-1 text-sm" :class="darkMode ? 'text-gray-200' : 'text-gray-900'">
+                        {{ group.user_set.count }} user(s)
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                        Permissions
+                    </dt>
+                    <dd class="mt-1 text-sm" :class="darkMode ? 'text-gray-200' : 'text-gray-900'">
+                        {{ group.permissions.count }} permission(s)
+                    </dd>
+                </div>
+            </dl>
+            
+            {% if group.user_set.all %}
+            <div class="mt-4 pt-4 border-t" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
+                <p class="text-xs font-medium mb-2" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                    Group Members:
+                </p>
+                <div class="space-y-1">
+                    {% for user in group.user_set.all|slice:":5" %}
+                        <p class="text-sm" :class="darkMode ? 'text-gray-300' : 'text-gray-700'">
+                            {{ user.username }}
+                        </p>
+                    {% endfor %}
+                    {% if group.user_set.count > 5 %}
+                        <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                            and {{ group.user_set.count|add:"-5" }} more...
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="col-span-full rounded-lg p-6" :class="darkMode ? 'bg-gray-800' : 'bg-white shadow'">
+            <p class="text-center text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                No groups found.
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

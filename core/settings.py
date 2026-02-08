@@ -14,6 +14,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_htmx',
     'graphene_django',          # GraphQL support
+    'users.apps.UsersConfig',   # Users & RBAC
     'cmdb.apps.CmdbConfig',     # our app
     'core.apps.CoreConfig',     # core app with feature pack loading
 ]
@@ -72,3 +73,16 @@ STATICFILES_DIRS = [
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 ROOT_URLCONF = 'core.urls'
+
+# Authentication settings
+LOGIN_URL = '/users/login/'
+LOGIN_REDIRECT_URL = '/cmdb/'
+LOGOUT_REDIRECT_URL = '/users/login/'
+
+# Database configuration for Django auth
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
