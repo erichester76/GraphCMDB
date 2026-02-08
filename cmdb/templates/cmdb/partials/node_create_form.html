@@ -1,13 +1,5 @@
 <h3 class="text-lg font-medium text-gray-900 dark:text-white">Create new {{ label }}</h3>
 
-<!-- DEBUG: Show what we received -->
-{% comment %}
-Form fields count: {{ form_fields|length }}
-{% for field in form_fields %}
-  Field: {{ field.key }}, Type: {{ field.type }}, Has choices: {{ field.choices|default:"No" }}
-{% endfor %}
-{% endcomment %}
-
 {% if error %}
     <div class="mt-4 p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
         {{ error }}
