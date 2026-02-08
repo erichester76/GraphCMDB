@@ -989,6 +989,8 @@ def audit_log_list(request):
                 'node_name': props.get('node_name', 'Unknown'),
                 'user': props.get('user', 'System'),
                 'changes': props.get('changes', ''),
+                'old_values': props.get('old_values', {}),
+                'new_values': props.get('new_values', {}),
                 'relationship_type': props.get('relationship_type', ''),
                 'target_label': props.get('target_label', ''),
                 'target_id': props.get('target_id', '')
