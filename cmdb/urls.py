@@ -9,6 +9,8 @@ urlpatterns = [
     
     path('', views.dashboard, name='dashboard'),
     
+    path('audit-log/', views.audit_log_list, name='audit_log_list'),
+    
     path('targets/', views.get_target_nodes, name='get_target_nodes'),
 
     path('<str:label>/', views.nodes_list, name='nodes_list'),

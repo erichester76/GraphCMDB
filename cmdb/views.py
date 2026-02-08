@@ -738,3 +738,53 @@ def get_target_nodes(request):
 
     except Exception as e:
         return HttpResponse(f'<option disabled>Error loading nodes for {target_label}: {str(e)}</option>')
+
+
+@require_http_methods(["GET"])
+def audit_log_list(request):
+    """
+    Global audit log view showing all audit log entries across all nodes.
+    Supports HTMX partial updates
+    """
+    try:
+        # Fetch all audit log entries
+        audit_node_class = DynamicNode.get_or_create_label('AuditLogEntry')
+        audit_nodes = audit_node_class.nodes.all()[:200]  # Limit to latest 200 entries
+        
+        # Extract and sort by timestamp
+        audit_entries = []
+        for node in audit_nodes:
+            props = node.custom_properties or {}
+            audit_entries.append({
+                'element_id': node.element_id,
+                'timestamp': props.get('timestamp', ''),
+                'action': props.get('action', ''),
+                'node_label': props.get('node_label', ''),
+                'node_id': props.get('node_id', ''),
+                'node_name': props.get('node_name', 'Unknown'),
+                'user': props.get('user', 'System'),
+                'changes': props.get('changes', ''),
+                'relationship_type': props.get('relationship_type', ''),
+                'target_label': props.get('target_label', ''),
+                'target_id': props.get('target_id', '')
+            })
+        
+        # Sort by timestamp descending (most recent first)
+        audit_entries.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+    except Exception as e:
+        print(f"Error fetching audit log: {e}")
+        audit_entries = []
+    
+    context = {
+        'audit_entries': audit_entries,
+        'all_labels': TypeRegistry.known_labels(),
+    }
+    
+    # If HTMX request, return content + header for OOB swap
+    if request.htmx:
+        content_html = render_to_string('cmdb/partials/audit_log_content.html', context, request=request)
+        header_html = render_to_string('cmdb/partials/audit_log_header.html', context, request=request)
+        return HttpResponse(content_html + header_html)
+    
+    return render(request, 'cmdb/audit_log_list.html', context)
