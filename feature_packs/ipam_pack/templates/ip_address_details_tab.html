@@ -1,0 +1,91 @@
+{% if label == 'IP_Address' %}
+<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">IP Address Details</h4>
+
+    {% if error %}
+        <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+            {{ error }}
+        </div>
+    {% else %}
+        <!-- Parent Network Section -->
+        {% if custom_data.network %}
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                </svg>
+                Parent Network
+            </h5>
+            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded border border-blue-200 dark:border-blue-800">
+                <p class="text-sm dark:text-gray-100">
+                    <span class="font-medium">Name:</span> 
+                    <a href="{% url 'cmdb:node_detail' custom_data.network.label custom_data.network.id %}" 
+                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                        {{ custom_data.network.name }}
+                    </a>
+                </p>
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">CIDR:</span> 
+                    <span class="font-mono text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded">{{ custom_data.network.cidr }}</span>
+                </p>
+                {% if custom_data.network.description %}
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">Description:</span> {{ custom_data.network.description }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                </svg>
+                Parent Network
+            </h5>
+            <p class="text-gray-500 dark:text-gray-400 text-sm italic">Not assigned to any network</p>
+        </div>
+        {% endif %}
+
+        <!-- MAC Address Section -->
+        {% if custom_data.mac_address %}
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                </svg>
+                Assigned MAC Address
+            </h5>
+            <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded border border-orange-200 dark:border-orange-800">
+                <p class="text-sm dark:text-gray-100">
+                    <span class="font-medium">Address:</span> 
+                    <a href="{% url 'cmdb:node_detail' custom_data.mac_address.label custom_data.mac_address.id %}" 
+                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline font-mono text-xs">
+                        {{ custom_data.mac_address.address }}
+                    </a>
+                </p>
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">Status:</span> 
+                    <span class="px-2 py-1 text-xs rounded-full
+                        {% if custom_data.mac_address.status == 'active' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                        {% elif custom_data.mac_address.status == 'inactive' %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
+                        {% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}">
+                        {{ custom_data.mac_address.status }}
+                    </span>
+                </p>
+            </div>
+        </div>
+        {% else %}
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                </svg>
+                Assigned MAC Address
+            </h5>
+            <p class="text-gray-500 dark:text-gray-400 text-sm italic">Not assigned to any MAC address</p>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endif %}

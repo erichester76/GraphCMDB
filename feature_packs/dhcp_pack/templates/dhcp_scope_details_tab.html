@@ -1,0 +1,99 @@
+{% if label == 'DHCP_Scope' %}
+<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">DHCP Scope Details</h4>
+
+    {% if error %}
+        <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+            {{ error }}
+        </div>
+    {% else %}
+        <!-- Network Section -->
+        {% if custom_data.network %}
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                </svg>
+                Parent Network
+            </h5>
+            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded">
+                <p class="text-sm dark:text-gray-100">
+                    <span class="font-medium">Name:</span> 
+                    <a href="{% url 'cmdb:node_detail' custom_data.network.label custom_data.network.id %}" 
+                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                        {{ custom_data.network.name }}
+                    </a>
+                </p>
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">CIDR:</span> {{ custom_data.network.cidr }}
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- DHCP Leases Section -->
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                DHCP Leases
+            </h5>
+            {% if custom_data.leases %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-300 dark:border-gray-600">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Client ID</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">IP Address</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">MAC Address</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Lease Start</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Lease End</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {% for lease in custom_data.leases %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <a href="{% url 'cmdb:node_detail' lease.label lease.id %}" 
+                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                                        {{ lease.client_id }}
+                                    </a>
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    {% if lease.ip_id %}
+                                        {{ lease.ip_address }}
+                                    {% else %}
+                                        <span class="text-gray-500 dark:text-gray-400 italic">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    {% if lease.mac_id %}
+                                        {{ lease.mac_address }}
+                                    {% else %}
+                                        <span class="text-gray-500 dark:text-gray-400 italic">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <span class="px-2 py-1 text-xs rounded-full
+                                        {% if lease.status == 'active' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                        {% elif lease.status == 'expired' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                                        {{ lease.status }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">{{ lease.lease_start }}</td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">{{ lease.lease_end }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-gray-500 dark:text-gray-400 text-sm italic">No leases assigned from this scope</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endif %}

@@ -1,0 +1,99 @@
+{% if label == 'VLAN' %}
+<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">VLAN Network Assignments</h4>
+
+    {% if error %}
+        <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+            {{ error }}
+        </div>
+    {% else %}
+        <!-- Assigned Networks Section -->
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+                </svg>
+                Assigned Networks
+            </h5>
+            {% if custom_data.networks %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-300 dark:border-gray-600">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Name</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">CIDR</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Description</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {% for network in custom_data.networks %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <a href="{% url 'cmdb:node_detail' network.label network.id %}" 
+                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                                        {{ network.name }}
+                                    </a>
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <span class="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ network.cidr }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    {% if network.description %}
+                                        {{ network.description }}
+                                    {% else %}
+                                        <span class="text-gray-500 dark:text-gray-400 italic">No description</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <span class="px-2 py-1 text-xs rounded-full
+                                        {% if network.status == 'active' or network.status == 'in_use' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                        {% elif network.status == 'planned' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                                        {% elif network.status == 'deprecated' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                        {% elif network.status == 'inactive' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                                        {{ network.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                    <p class="text-sm text-blue-800 dark:text-blue-200 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Total networks in this VLAN: {{ custom_data.networks|length }}
+                    </p>
+                </div>
+            {% else %}
+                <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
+                    <p class="text-gray-600 dark:text-gray-400 text-sm flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        No networks are currently assigned to this VLAN
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- VLAN Info Box -->
+        <div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 p-4 rounded border border-purple-200 dark:border-purple-800">
+            <h6 class="text-sm font-semibold text-purple-900 dark:text-purple-200 mb-2 flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                About VLANs
+            </h6>
+            <p class="text-xs text-gray-700 dark:text-gray-300">
+                VLANs (Virtual Local Area Networks) are used to segment network traffic and provide logical network isolation. 
+                Networks assigned to a VLAN share the same broadcast domain and can be configured with specific access controls and routing policies.
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endif %}

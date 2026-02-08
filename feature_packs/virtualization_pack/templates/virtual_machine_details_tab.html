@@ -1,0 +1,52 @@
+{% if label == 'Virtual_Machine' %}
+<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Virtual Machine Details</h4>
+
+    {% if error %}
+        <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+            {{ error }}
+        </div>
+    {% else %}
+        <!-- Cluster Section -->
+        {% if custom_data.cluster %}
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
+                </svg>
+                Hosted On Cluster
+            </h5>
+            <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded border border-purple-200 dark:border-purple-800">
+                <p class="text-sm dark:text-gray-100">
+                    <span class="font-medium">Cluster:</span> 
+                    <a href="{% url 'cmdb:node_detail' custom_data.cluster.label custom_data.cluster.id %}" 
+                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                        {{ custom_data.cluster.name }}
+                    </a>
+                </p>
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">Type:</span> {{ custom_data.cluster.type }}
+                </p>
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">Status:</span> 
+                    <span class="px-2 py-1 text-xs rounded-full
+                        {% if custom_data.cluster.status == 'active' or custom_data.cluster.status == 'online' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                        {% elif custom_data.cluster.status == 'maintenance' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                        {% elif custom_data.cluster.status == 'offline' or custom_data.cluster.status == 'inactive' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                        {{ custom_data.cluster.status }}
+                    </span>
+                </p>
+                {% if custom_data.cluster.description %}
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">Description:</span> {{ custom_data.cluster.description }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+            <p class="text-gray-500 dark:text-gray-400 text-sm italic">No cluster information available for this virtual machine</p>
+        {% endif %}
+    {% endif %}
+</div>
+{% endif %}

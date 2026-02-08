@@ -1,0 +1,154 @@
+{% if label == 'Interface' %}
+<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Interface Details</h4>
+
+    {% if error %}
+        <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+            {{ error }}
+        </div>
+    {% else %}
+        <!-- Device Section -->
+        {% if custom_data.device %}
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                </svg>
+                Located On Device
+            </h5>
+            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded border border-blue-200 dark:border-blue-800">
+                <p class="text-sm dark:text-gray-100">
+                    <span class="font-medium">Device:</span> 
+                    <a href="{% url 'cmdb:node_detail' custom_data.device.label custom_data.device.id %}" 
+                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                        {{ custom_data.device.name }}
+                    </a>
+                </p>
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">Type:</span> {{ custom_data.device.type }}
+                </p>
+                <p class="text-sm dark:text-gray-100 mt-1">
+                    <span class="font-medium">Status:</span> 
+                    <span class="px-2 py-1 text-xs rounded-full
+                        {% if custom_data.device.status == 'active' or custom_data.device.status == 'online' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                        {% elif custom_data.device.status == 'maintenance' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                        {% elif custom_data.device.status == 'offline' or custom_data.device.status == 'inactive' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                        {{ custom_data.device.status }}
+                    </span>
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Connected Cables Section -->
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                </svg>
+                Connected Cables
+            </h5>
+            {% if custom_data.cables %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-300 dark:border-gray-600">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Length</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Color</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {% for cable in custom_data.cables %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <a href="{% url 'cmdb:node_detail' cable.label cable.id %}" 
+                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                                        {{ cable.type }}
+                                    </a>
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    {{ cable.length_meters }} m
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <span class="inline-flex items-center">
+                                        <span class="w-3 h-3 rounded-full mr-2" style="background-color: {{ cable.color|lower }}"></span>
+                                        {{ cable.color }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <span class="px-2 py-1 text-xs rounded-full
+                                        {% if cable.status == 'active' or cable.status == 'connected' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                        {% elif cable.status == 'disconnected' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                        {% elif cable.status == 'damaged' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                                        {{ cable.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-gray-500 dark:text-gray-400 text-sm italic">No cables connected to this interface</p>
+            {% endif %}
+        </div>
+
+        <!-- Terminating Circuits Section -->
+        <div class="mb-6">
+            <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                Terminating Circuits
+            </h5>
+            {% if custom_data.circuits %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-300 dark:border-gray-600">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Name</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Circuit ID</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bandwidth</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {% for circuit in custom_data.circuits %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <a href="{% url 'cmdb:node_detail' circuit.label circuit.id %}" 
+                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                                        {{ circuit.name }}
+                                    </a>
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <span class="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ circuit.circuit_id }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    {{ circuit.bandwidth_mbps }} Mbps
+                                </td>
+                                <td class="px-4 py-3 text-sm dark:text-gray-100">
+                                    <span class="px-2 py-1 text-xs rounded-full
+                                        {% if circuit.status == 'active' or circuit.status == 'up' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                        {% elif circuit.status == 'maintenance' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                        {% elif circuit.status == 'down' or circuit.status == 'inactive' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                                        {{ circuit.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-gray-500 dark:text-gray-400 text-sm italic">No circuits terminate at this interface</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endif %}
