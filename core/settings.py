@@ -70,6 +70,15 @@ REST_FRAMEWORK = {
 # Neo4j connection (used by neomodel)
 NEO4J_BOLT_URL = 'bolt://neo4j:23r9u4230rusfd@neo4j:7687'
 
+# Django database configuration (used for built-in apps like auth, sessions, contenttypes)
+# Main CMDB data is stored in Neo4j, but Django requires a database for its internal tables
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
 ALLOWED_HOSTS = ['*']           # only for local dev!
 DEBUG = True
 
