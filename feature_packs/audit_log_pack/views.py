@@ -14,7 +14,9 @@ def audit_log_tab(request, label, element_id):
     context = {
         'label': label,
         'element_id': element_id,
-        'audit_entries': [],
+        'custom_data': {
+            'audit_entries': []
+        },
         'error': None,
     }
 
@@ -44,7 +46,7 @@ def audit_log_tab(request, label, element_id):
         
         # Sort by timestamp descending (most recent first) and limit to 100
         audit_entries.sort(key=lambda x: x['timestamp'], reverse=True)
-        context['audit_entries'] = audit_entries[:100]
+        context['custom_data']['audit_entries'] = audit_entries[:100]
 
     except Exception as e:
         context['error'] = str(e)

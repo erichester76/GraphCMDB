@@ -5,9 +5,9 @@
         <span class="text-sm text-gray-500">Recent changes to this node</span>
     </div>
 
-    {% if custom_data.error %}
+    {% if error %}
         <div class="p-4 bg-red-100 text-red-800 rounded">
-            Error loading audit log: {{ custom_data.error }}
+            Error loading audit log: {{ error }}
         </div>
     {% elif custom_data.audit_entries %}
         <div class="overflow-x-auto">
