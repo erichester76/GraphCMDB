@@ -11,6 +11,8 @@ from neomodel import db, RelationshipTo
 from django.template import Context, Template
 from django.conf import settings
 import importlib
+import pandas as pd
+import io
 
 # Import audit log utility if available
 try:
@@ -890,9 +892,6 @@ def node_import(request, label):
     GET: Display import form and download template
     POST: Process uploaded file and create nodes
     """
-    import pandas as pd
-    import io
-    
     try:
         meta = TypeRegistry.get_metadata(label)
         if not meta:
@@ -976,9 +975,12 @@ def node_import(request, label):
                     # Check if this is a relationship column
                     if col.endswith('_names'):
                         rel_type = col[:-6]  # Remove '_names' suffix
-                        if rel_type in relationships:
-                            # Store for later processing
-                            row_relationships[rel_type] = str(value)
+                        # Relationship types in metadata are uppercase (e.g., BELONGS_TO)
+                        # Check if this matches a known relationship (case-insensitive)
+                        rel_type_upper = rel_type.upper()
+                        if rel_type_upper in relationships:
+                            # Store with uppercase key for consistency
+                            row_relationships[rel_type_upper] = str(value)
                         continue
                     
                     # Regular property
@@ -1061,7 +1063,7 @@ def node_import(request, label):
                     try:
                         node_class.connect_nodes(
                             node.element_id, label,
-                            rel_type.upper(), 
+                            rel_type,  # Already uppercase from storage
                             target_id, target_label
                         )
                     except Exception as e:
