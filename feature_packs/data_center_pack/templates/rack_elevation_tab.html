@@ -11,10 +11,10 @@
             Total Height: {{ custom_data.rack_units|length }} U
         </p>
 
-        <!-- Two-column layout: 50% properties/relationships, 50% rack views -->
+        <!-- Two-column layout: 30% properties/relationships, 70% rack views -->
         <div class="flex gap-4">
-            <!-- Left column: Properties and Relationships (50%) -->
-            <div class="w-1/2 space-y-6">
+            <!-- Left column: Properties and Relationships (30%) -->
+            <div class="w-[30%] space-y-6">
                 <!-- Properties Section -->
                 <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
                     <h5 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">Properties</h5>
@@ -54,44 +54,44 @@
                 </div>
             </div>
 
-            <!-- Right column: Front and Back Rack Views (50% total, 25% each) -->
-            <div class="w-1/2 flex gap-2">
-                <!-- Front View (25% of total width) -->
+            <!-- Right column: Front and Back Rack Views (70% total, 35% each) -->
+            <div class="w-[70%] flex gap-4">
+                <!-- Front View (35% of total width) -->
                 <div class="w-1/2">
-                    <h5 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 text-center">Front</h5>
-                    <div class="border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 p-2 max-h-[600px] overflow-y-auto shadow-inner">
+                    <h5 class="text-base font-semibold text-gray-800 dark:text-gray-200 mb-2 text-center">Front</h5>
+                    <div class="border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 p-3 max-h-[600px] overflow-y-auto shadow-inner">
                         {% for unit in custom_data.rack_units %}
-                            <div class="rack-unit flex items-center justify-between h-10 border-b border-gray-200 dark:border-gray-700 px-2 text-xs {% cycle 'bg-amber-50 dark:bg-amber-950' 'bg-gray-100 dark:bg-gray-800' %}">
-                                <span class="font-medium min-w-[40px]">U{{ unit.number }}</span>
+                            <div class="rack-unit flex items-center justify-between h-12 border-b border-gray-200 dark:border-gray-700 px-4 text-sm {% cycle 'bg-amber-50 dark:bg-amber-950' 'bg-gray-100 dark:bg-gray-800' %}">
+                                <span class="font-medium min-w-[50px]">U{{ unit.number }}</span>
 
                                 {% if unit.device %}
                                     <a href="{% url 'cmdb:node_detail' unit.device.target_label unit.device.target_id %}" 
-                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate">
-                                        {{ unit.device.target_name|default:unit.device.target_id|truncatechars:20 }}
+                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate flex-1 text-center">
+                                        {{ unit.device.target_name|default:unit.device.target_id|truncatechars:35 }}
                                     </a>
                                 {% else %}
-                                    <span class="text-gray-500 dark:text-gray-400 italic">Empty</span>
+                                    <span class="text-gray-500 dark:text-gray-400 italic flex-1 text-center">Empty</span>
                                 {% endif %}
                             </div>
                         {% endfor %}
                     </div>
                 </div>
 
-                <!-- Back View (25% of total width) -->
+                <!-- Back View (35% of total width) -->
                 <div class="w-1/2">
-                    <h5 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 text-center">Back</h5>
-                    <div class="border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 p-2 max-h-[600px] overflow-y-auto shadow-inner">
+                    <h5 class="text-base font-semibold text-gray-800 dark:text-gray-200 mb-2 text-center">Back</h5>
+                    <div class="border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 p-3 max-h-[600px] overflow-y-auto shadow-inner">
                         {% for unit in custom_data.rack_units %}
-                            <div class="rack-unit flex items-center justify-between h-10 border-b border-gray-200 dark:border-gray-700 px-2 text-xs {% cycle 'bg-amber-50 dark:bg-amber-950' 'bg-gray-100 dark:bg-gray-800' %}">
-                                <span class="font-medium min-w-[40px]">U{{ unit.number }}</span>
+                            <div class="rack-unit flex items-center justify-between h-12 border-b border-gray-200 dark:border-gray-700 px-4 text-sm {% cycle 'bg-amber-50 dark:bg-amber-950' 'bg-gray-100 dark:bg-gray-800' %}">
+                                <span class="font-medium min-w-[50px]">U{{ unit.number }}</span>
 
                                 {% if unit.device %}
                                     <a href="{% url 'cmdb:node_detail' unit.device.target_label unit.device.target_id %}" 
-                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate">
-                                        {{ unit.device.target_name|default:unit.device.target_id|truncatechars:20 }}
+                                       class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate flex-1 text-center">
+                                        {{ unit.device.target_name|default:unit.device.target_id|truncatechars:35 }}
                                     </a>
                                 {% else %}
-                                    <span class="text-gray-500 dark:text-gray-400 italic">Empty</span>
+                                    <span class="text-gray-500 dark:text-gray-400 italic flex-1 text-center">Empty</span>
                                 {% endif %}
                             </div>
                         {% endfor %}
