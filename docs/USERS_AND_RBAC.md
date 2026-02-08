@@ -1,5 +1,36 @@
 # Users and RBAC Implementation
 
+## 🚀 Quick Start: Creating Your First Admin User
+
+**Before you can log in, you need to create your first admin user!** This is a one-time setup step.
+
+### Method 1: Interactive Command (Recommended)
+```bash
+python manage.py createsuperuser
+```
+
+Follow the prompts to enter:
+- Username
+- Email (optional)
+- Password (twice for confirmation)
+
+### Method 2: Setup Script (Easiest)
+```bash
+python setup_admin.py
+```
+
+This friendly script will guide you through the process with helpful prompts and validation.
+
+### Method 3: Non-Interactive (For Automation)
+```bash
+export DJANGO_SUPERUSER_PASSWORD='your-secure-password'
+python manage.py createsuperuser --noinput --username admin --email admin@example.com
+```
+
+After creating your admin user, navigate to `/users/login/` and log in!
+
+---
+
 ## Overview
 
 This document describes the implementation of the Users subsystem with Role-Based Access Control (RBAC) in GraphCMDB. The implementation uses Django's built-in authentication system as the foundation, providing industry-standard security and user management capabilities.
