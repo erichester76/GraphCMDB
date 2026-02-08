@@ -2,13 +2,13 @@
 <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
     <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Rack Elevation Diagram</h4>
 
-    {% if error %}
+    {% if custom_data.error %}
         <div class="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
-            {{ error }}
+            {{ custom_data.error }}
         </div>
-    {% else %}
+    {% elif custom_data.rack_units %}
         <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
-            Total Height: {{ custom_data|length }} U
+            Total Height: {{ custom_data.rack_units|length }} U
         </p>
 
         <!-- Two-column layout: 50% properties/relationships, 50% rack views -->
@@ -60,7 +60,7 @@
                 <div class="w-1/2">
                     <h5 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 text-center">Front</h5>
                     <div class="border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 p-2 max-h-[600px] overflow-y-auto shadow-inner">
-                        {% for unit in custom_data %}
+                        {% for unit in custom_data.rack_units %}
                             <div class="rack-unit flex items-center justify-between h-10 border-b border-gray-200 dark:border-gray-700 px-2 text-xs {% cycle 'bg-amber-50 dark:bg-amber-950' 'bg-gray-100 dark:bg-gray-800' %}">
                                 <span class="font-medium min-w-[40px]">U{{ unit.number }}</span>
 
@@ -81,7 +81,7 @@
                 <div class="w-1/2">
                     <h5 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 text-center">Back</h5>
                     <div class="border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 p-2 max-h-[600px] overflow-y-auto shadow-inner">
-                        {% for unit in custom_data %}
+                        {% for unit in custom_data.rack_units %}
                             <div class="rack-unit flex items-center justify-between h-10 border-b border-gray-200 dark:border-gray-700 px-2 text-xs {% cycle 'bg-amber-50 dark:bg-amber-950' 'bg-gray-100 dark:bg-gray-800' %}">
                                 <span class="font-medium min-w-[40px]">U{{ unit.number }}</span>
 
@@ -99,6 +99,8 @@
                 </div>
             </div>
         </div>
+    {% else %}
+        <p class="text-gray-500 dark:text-gray-400 text-center py-8">No rack units defined or height not set</p>
     {% endif %}
 </div>
 {% endif %}
