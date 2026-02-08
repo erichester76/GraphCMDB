@@ -5,9 +5,7 @@ from . import feature_pack_views
 
 app_name = 'cmdb'  
 
-urlpatterns = [
-    path('types/register/', views.type_register, name='type_register'),
-    
+urlpatterns = [    
     path('', views.dashboard, name='dashboard'),
     
     path('audit-log/', views.audit_log_list, name='audit_log_list'),
