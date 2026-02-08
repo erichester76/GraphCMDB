@@ -82,28 +82,71 @@
 
 <!-- Pagination Controls -->
 <div class="bg-white dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700 sm:px-6">
-    <!-- Mobile: Simple Previous/Next -->
-    <div class="flex justify-between sm:hidden mb-4">
-        <button 
-            @click="goToPage(currentPage - 1)"
-            :disabled="currentPage <= 1"
-            :class="currentPage <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
-            class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800">
-            Previous
-        </button>
-        <button 
-            @click="goToPage(currentPage + 1)"
-            :disabled="currentPage >= totalPages"
-            :class="currentPage >= totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
-            class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800">
-            Next
-        </button>
+    <!-- Mobile: Vertical layout -->
+    <div class="sm:hidden space-y-3">
+        <!-- Previous/Next buttons -->
+        <div class="flex justify-between">
+            <button 
+                @click="goToPage(currentPage - 1)"
+                :disabled="currentPage <= 1"
+                :class="currentPage <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800">
+                Previous
+            </button>
+            <button 
+                @click="goToPage(currentPage + 1)"
+                :disabled="currentPage >= totalPages"
+                :class="currentPage >= totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800">
+                Next
+            </button>
+        </div>
+        <!-- Range display (centered) -->
+        <div class="text-center">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+                Showing
+                <span class="font-medium" x-text="startItem"></span>
+                to
+                <span class="font-medium" x-text="endItem"></span>
+                of
+                <span class="font-medium" x-text="totalCount"></span>
+                results
+            </p>
+        </div>
+        <!-- Per-page selector (centered) -->
+        <div class="flex items-center justify-center gap-2">
+            <label for="perPage-mobile" class="text-sm text-gray-700 dark:text-gray-300">Per page:</label>
+            <select 
+                id="perPage-mobile"
+                x-model="perPage"
+                @change="changePerPage()"
+                class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
     </div>
     
-    <!-- Pagination Info and Controls - Visible on ALL screens -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <!-- Left side: Range display and per-page selector -->
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+    <!-- Desktop: Horizontal layout with centered info -->
+    <div class="hidden sm:flex sm:items-center sm:justify-between">
+        <!-- Left: Previous button -->
+        <div>
+            <button 
+                @click="goToPage(currentPage - 1)"
+                :disabled="currentPage <= 1"
+                :class="currentPage <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800">
+                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+            </button>
+        </div>
+        
+        <!-- Center: Range display and per-page selector -->
+        <div class="flex items-center gap-6">
             <p class="text-sm text-gray-700 dark:text-gray-300">
                 Showing
                 <span class="font-medium" x-text="startItem"></span>
@@ -128,67 +171,18 @@
             </div>
         </div>
         
-        <!-- Right side: Page navigation (desktop only) -->
-        <div class="hidden sm:block">
-            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <!-- First Page -->
-                <button 
-                    @click="goToPage(1)"
-                    :disabled="currentPage <= 1"
-                    :class="currentPage <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
-                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400">
-                    <span class="sr-only">First</span>
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                    </svg>
-                </button>
-                <!-- Previous Page -->
-                <button 
-                    @click="goToPage(currentPage - 1)"
-                    :disabled="currentPage <= 1"
-                    :class="currentPage <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
-                    class="relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400">
-                    <span class="sr-only">Previous</span>
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
-                
-                <!-- Page Numbers -->
-                <template x-for="page in pageNumbers" :key="page">
-                    <button 
-                        @click="goToPage(page)"
-                        :class="page === currentPage ? 
-                            'z-10 bg-indigo-50 dark:bg-indigo-900 border-indigo-500 dark:border-indigo-600 text-indigo-600 dark:text-indigo-200' : 
-                            'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
-                        class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
-                        x-text="page">
-                    </button>
-                </template>
-                
-                <!-- Next Page -->
-                <button 
-                    @click="goToPage(currentPage + 1)"
-                    :disabled="currentPage >= totalPages"
-                    :class="currentPage >= totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
-                    class="relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400">
-                    <span class="sr-only">Next</span>
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                </button>
-                <!-- Last Page -->
-                <button 
-                    @click="goToPage(totalPages)"
-                    :disabled="currentPage >= totalPages"
-                    :class="currentPage >= totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
-                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400">
-                    <span class="sr-only">Last</span>
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                    </svg>
-                </button>
-            </nav>
+        <!-- Right: Next button -->
+        <div>
+            <button 
+                @click="goToPage(currentPage + 1)"
+                :disabled="currentPage >= totalPages"
+                :class="currentPage >= totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800">
+                Next
+                <svg class="h-5 w-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
         </div>
     </div>
 </div>
@@ -210,17 +204,28 @@
  * 
  * This component manages:
  * - Current page state
- * - Items per page selection
+ * - Items per page selection (with localStorage persistence)
  * - Page number generation with smart visibility
  * - Navigation via HTMX for server-side pagination
  */
 function paginationManager(initialPage, initialPerPage, initialTotalCount, initialTotalPages, label) {
+    // Load saved page size from localStorage, fall back to initialPerPage
+    const savedPerPage = localStorage.getItem('cmdb_pagination_perPage');
+    const perPageValue = savedPerPage ? parseInt(savedPerPage, 10) : initialPerPage;
+    
     return {
         currentPage: initialPage,
-        perPage: initialPerPage,
+        perPage: perPageValue,
         totalCount: initialTotalCount,
         totalPages: initialTotalPages,
         label: label,
+        
+        init() {
+            // If the saved perPage differs from initial and we're on page 1, reload with saved preference
+            if (savedPerPage && perPageValue !== initialPerPage && this.currentPage === 1) {
+                this.changePerPage();
+            }
+        },
         
         // Calculate the starting item number for current page
         get startItem() {
@@ -263,6 +268,9 @@ function paginationManager(initialPage, initialPerPage, initialTotalCount, initi
         
         // Change items per page and reset to page 1
         changePerPage() {
+            // Save to localStorage for persistence
+            localStorage.setItem('cmdb_pagination_perPage', this.perPage);
+            
             const url = `/cmdb/${this.label}/?page=1&per_page=${this.perPage}`;
             htmx.ajax('GET', url, {target: '#nodes-content', swap: 'innerHTML'});
         }
