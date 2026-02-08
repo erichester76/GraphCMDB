@@ -83,7 +83,7 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 {% if entry.action == 'update' and entry.old_values %}
                                     <button
-                                        hx-post="/cmdb/nodes/{{ label }}/{{ element_id }}/revert/"
+                                        hx-post="{% url 'cmdb:node_revert' label element_id %}"
                                         hx-vals='{"audit_entry_id": "{{ entry.id }}"}'
                                         hx-target="#properties-section"
                                         hx-swap="outerHTML"

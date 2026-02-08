@@ -514,8 +514,9 @@ def node_edit(request, label, element_id):
         changed_keys = [k for k in new_props.keys() if old_props.get(k) != new_props.get(k)]
         
         # Capture old and new values for changed properties
-        old_values = {k: old_props.get(k) for k in changed_keys}
-        new_values = {k: new_props.get(k) for k in changed_keys}
+        # Only include keys that existed in old_props (modified properties)
+        old_values = {k: old_props.get(k) for k in changed_keys if k in old_props}
+        new_values = {k: new_props.get(k) for k in changed_keys if k in old_props}
         
         create_audit_entry(
             action='update',
@@ -879,7 +880,7 @@ def node_revert(request, label, element_id):
     try:
         audit_entry_id = request.POST.get('audit_entry_id', '').strip()
         if not audit_entry_id:
-            raise ValueError("Missing audit entry ID")
+            raise ValueError("Cannot revert: No audit entry specified")
         
         # Get the audit log entry
         audit_node_class = DynamicNode.get_or_create_label('AuditLogEntry')
@@ -891,7 +892,7 @@ def node_revert(request, label, element_id):
         old_values = audit_props.get('old_values', {})
         
         if not old_values:
-            raise ValueError("No old values found to revert to")
+            raise ValueError("Cannot revert: This audit entry does not contain previous property values")
         
         # Get the node to update
         node_class = DynamicNode.get_or_create_label(label)
@@ -901,7 +902,8 @@ def node_revert(request, label, element_id):
         
         # Store current values for audit log
         current_props = node.custom_properties or {}
-        new_values_for_audit = {k: current_props.get(k) for k in old_values.keys()}
+        # Only include keys that exist in current_props
+        new_values_for_audit = {k: current_props.get(k) for k in old_values.keys() if k in current_props}
         
         # Update node with old values
         current_props.update(old_values)
