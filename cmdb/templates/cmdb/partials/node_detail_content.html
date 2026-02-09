@@ -16,7 +16,7 @@
                     hx-get="{% url 'cmdb:node_edit' label node.element_id %}" 
                     hx-target="#edit-modal-content"
                     hx-swap="innerHTML"
-                    onclick="document.getElementById('edit-modal').showModal()"
+                    data-modal-trigger="edit-modal"
                     class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
                     Edit
                 </button>

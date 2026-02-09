@@ -63,7 +63,7 @@
             hx-target="#create-modal-content"
             hx-swap="innerHTML"
             hx-trigger="click"
-            onclick="document.getElementById('create-modal').showModal()"
+            data-modal-trigger="create-modal"
             class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800">
             Create {{ label }}
         </button>
@@ -82,13 +82,6 @@
 <div id="nodes-content" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
     {% include "cmdb/partials/nodes_table.html" %}
 </div>
-
-<!-- Trigger modal open (hidden button for HTMX) -->
-<button 
-    id="open-create-modal" 
-    onclick="document.getElementById('create-modal').showModal()"
-    class="hidden">
-</button>
 
 <script>
 document.body.addEventListener('nodeCreated', function(evt) {

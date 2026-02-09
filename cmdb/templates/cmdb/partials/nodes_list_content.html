@@ -6,13 +6,6 @@
     {% include "cmdb/partials/nodes_table.html" %}
 </div>
 
-<!-- Trigger modal open (hidden button for HTMX) -->
-<button 
-    id="open-create-modal" 
-    onclick="document.getElementById('create-modal').showModal()"
-    class="hidden">
-</button>
-
 <script>
 document.body.addEventListener('nodeCreated', function(evt) {
     // Close modal on success

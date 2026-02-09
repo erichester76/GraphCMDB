@@ -1,4 +1,4 @@
-<div class="p-6 space-y-4">
+<div class="p-6 space-y-4" data-error-content="true">
     <!-- Error Icon and Header -->
     <div class="flex items-center space-x-3">
         <div class="flex-shrink-0">
@@ -42,7 +42,7 @@
     <!-- Close Button -->
     <div class="flex justify-end pt-2">
         <button 
-            onclick="this.closest('dialog')?.close()"
+            onclick="document.getElementById('permission-error-modal')?.close() || this.closest('dialog')?.close()"
             class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
             Close
         </button>

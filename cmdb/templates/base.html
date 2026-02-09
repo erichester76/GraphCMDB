@@ -155,9 +155,9 @@
                                                 hx-get="{% url 'cmdb:node_create' label %}" 
                                                 hx-target="#create-modal-content"
                                                 hx-swap="innerHTML"
-                                                onclick="document.getElementById('create-modal')?.showModal()"
                                                 class="p-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-800"
-                                                title="Create {{ label }}">
+                                                title="Create {{ label }}"
+                                                data-modal-trigger="create-modal">
                                                 <svg class="h-4 w-4 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                                 </svg>
@@ -363,6 +363,72 @@
             :class="darkMode ? 'dark bg-gray-800 text-white' : 'bg-white'">
         <div id="create-modal-content"></div>
     </dialog>
+
+    <!-- Permission Error Modal (Global) -->
+    <dialog id="permission-error-modal" 
+            role="alertdialog"
+            aria-label="Permission Error"
+            class="rounded-lg shadow-xl max-w-md w-full backdrop:bg-black backdrop:bg-opacity-50"
+            :class="darkMode ? 'dark bg-gray-800 text-white' : 'bg-white'">
+        <div id="permission-error-modal-content"></div>
+    </dialog>
+
+    <!-- Script to handle permission errors and modal opening -->
+    <script>
+        // Handle permission errors in HTMX responses
+        document.body.addEventListener('htmx:beforeSwap', function(event) {
+            // Check if the response contains error content
+            const response = event.detail.xhr.responseText;
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = response;
+            
+            // Check if response has the error marker
+            const errorContent = tempDiv.querySelector('[data-error-content="true"]');
+            
+            if (errorContent) {
+                // This is an error response
+                event.detail.shouldSwap = false; // Prevent normal swap
+                
+                // Close any open form modals
+                const createModal = document.getElementById('create-modal');
+                const editModal = document.getElementById('edit-modal');
+                if (createModal && createModal.open) {
+                    createModal.close();
+                }
+                if (editModal && editModal.open) {
+                    editModal.close();
+                }
+                
+                // Show error in dedicated error modal
+                const errorModal = document.getElementById('permission-error-modal');
+                const errorModalContent = document.getElementById('permission-error-modal-content');
+                if (errorModal && errorModalContent) {
+                    errorModalContent.innerHTML = response;
+                    errorModal.showModal();
+                }
+            }
+        });
+
+        // Open modal after successful HTMX swap (only if not an error)
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            // Check if the swapped content is NOT an error
+            const target = event.detail.target;
+            const content = target.querySelector('[data-error-content="true"]');
+            
+            if (!content) {
+                // Find the button that triggered this request
+                const triggerElement = event.detail.elt;
+                const modalId = triggerElement.getAttribute('data-modal-trigger');
+                
+                if (modalId) {
+                    const modal = document.getElementById(modalId);
+                    if (modal && !modal.open) {
+                        modal.showModal();
+                    }
+                }
+            }
+        });
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>
