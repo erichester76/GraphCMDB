@@ -1,0 +1,178 @@
+<h3 class="text-lg font-medium text-gray-900 dark:text-white">Edit DNS Record</h3>
+
+{% if error %}
+    <div class="mt-4 p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+        {{ error }}
+    </div>
+{% endif %}
+
+<form 
+    hx-post="{% url 'cmdb:node_edit' label element_id %}"
+    hx-target="#edit-modal-content"
+    hx-swap="innerHTML"
+    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+    hx-on::after-request="if(event.detail.elt === this && event.detail.successful) { document.getElementById('edit-modal').close(); htmx.trigger('#nodes-content', 'refresh'); }">
+
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+    <div class="space-y-4">
+        {% if name_field %}
+        <div>
+            <label for="{{ name_field.input_name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {{ name_field.key }}
+                {% if name_field.required %}
+                    <span class="text-red-600">*</span>
+                {% endif %}
+            </label>
+            <input type="{{ name_field.type }}" 
+                id="{{ name_field.input_name }}" 
+                name="{{ name_field.input_name }}"
+                value="{{ name_field.value }}"
+                {% if name_field.required %}required{% endif %}
+                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        </div>
+        {% endif %}
+
+        <div>
+            <label for="prop_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Record Type <span class="text-red-600">*</span>
+            </label>
+            <select
+                id="prop_type"
+                name="prop_type"
+                required
+                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                <option value="" disabled>-- Select type --</option>
+                {% for rr in rr_types %}
+                    <option value="{{ rr }}" {% if current_type == rr %}selected{% endif %}>{{ rr }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label for="zone_search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                DNS Zone <span class="text-red-600">*</span>
+            </label>
+            <input
+                id="zone_search"
+                name="q"
+                type="text"
+                placeholder="Search zones..."
+                hx-get="{% url 'cmdb:get_target_nodes' %}?target_label=DNS_Zone&select_id=zone_id&select_name=zone_id&placeholder=Select%20DNS%20Zone{% if current_zone %}&selected_id={{ current_zone.target_id }}{% endif %}"
+                hx-target="#zone_id_container"
+                hx-trigger="load, keyup changed delay:300ms"
+                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            <div id="zone_id_container" class="mt-2"></div>
+            {% if current_zone %}
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Current: {{ current_zone.target_name }}</p>
+            {% endif %}
+        </div>
+
+        <div id="ip_lookup" class="hidden">
+            <label for="ip_search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Resolves To (IP Address)
+            </label>
+            <input
+                id="ip_search"
+                name="q"
+                type="text"
+                placeholder="Search IP addresses..."
+                hx-get="{% url 'cmdb:get_target_nodes' %}?target_label=IP_Address&select_id=ip_id&select_name=ip_id&placeholder=Select%20IP%20Address&required=false{% if current_resolve and current_resolve.target_label == 'IP_Address' %}&selected_id={{ current_resolve.target_id }}{% endif %}"
+                hx-target="#ip_id_container"
+                hx-trigger="load, keyup changed delay:300ms"
+                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            <div id="ip_id_container" class="mt-2"></div>
+            {% if current_resolve and current_resolve.target_label == 'IP_Address' %}
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Current: {{ current_resolve.target_name }}</p>
+            {% endif %}
+        </div>
+
+        <div id="cname_lookup" class="hidden">
+            <label for="record_search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                CNAME Target (DNS Record)
+            </label>
+            <input
+                id="record_search"
+                name="q"
+                type="text"
+                placeholder="Search DNS records..."
+                hx-get="{% url 'cmdb:get_target_nodes' %}?target_label=DNS_Record&select_id=record_id&select_name=record_id&placeholder=Select%20DNS%20Record&required=false{% if current_resolve and current_resolve.target_label == 'DNS_Record' %}&selected_id={{ current_resolve.target_id }}{% endif %}"
+                hx-target="#record_id_container"
+                hx-trigger="load, keyup changed delay:300ms"
+                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            <div id="record_id_container" class="mt-2"></div>
+            {% if current_resolve and current_resolve.target_label == 'DNS_Record' %}
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Current: {{ current_resolve.target_name }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if other_fields %}
+        <div class="space-y-4 mt-6">
+            {% for field in other_fields %}
+                <div>
+                    <label for="{{ field.input_name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ field.key }}
+                        {% if field.required %}
+                            <span class="text-red-600">*</span>
+                        {% endif %}
+                    </label>
+                    {% if field.type == 'select' %}
+                        <select 
+                            id="{{ field.input_name }}" 
+                            name="{{ field.input_name }}"
+                            {% if field.required %}required{% endif %}
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            {% if not field.required %}
+                                <option value="">-- Select {{ field.key }} --</option>
+                            {% else %}
+                                <option value="" disabled selected>-- Select {{ field.key }} --</option>
+                            {% endif %}
+                            {% for choice in field.choices %}
+                                <option value="{{ choice }}" {% if field.value == choice %}selected{% endif %}>{{ choice }}</option>
+                            {% endfor %}
+                        </select>
+                    {% else %}
+                        <input type="{{ field.type }}" 
+                            id="{{ field.input_name }}" 
+                            name="{{ field.input_name }}"
+                            value="{{ field.value }}"
+                            {% if field.required %}required{% endif %}
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="mt-6 flex justify-end gap-3">
+        <button type="button" onclick="document.getElementById('edit-modal').close()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+            Cancel
+        </button>
+        <button type="submit" class="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800">
+            Save DNS Record
+        </button>
+    </div>
+</form>
+
+<script>
+    (function () {
+        const typeSelect = document.getElementById('prop_type');
+        const ipLookup = document.getElementById('ip_lookup');
+        const cnameLookup = document.getElementById('cname_lookup');
+
+        function updateTypeUI() {
+            const type = (typeSelect.value || '').toUpperCase();
+            ipLookup.classList.add('hidden');
+            cnameLookup.classList.add('hidden');
+            if (type === 'A' || type === 'AAAA') {
+                ipLookup.classList.remove('hidden');
+            } else if (type === 'CNAME') {
+                cnameLookup.classList.remove('hidden');
+            }
+        }
+
+        typeSelect.addEventListener('change', updateTypeUI);
+        updateTypeUI();
+    })();
+</script>

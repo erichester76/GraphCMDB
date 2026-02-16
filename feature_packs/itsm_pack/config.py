@@ -1,6 +1,7 @@
 FEATURE_PACK_CONFIG = {
     'name': 'ITSM Pack',
     'applies_to_labels': ['Issue', 'Problem', 'Change', 'Release', 'Event'],
+    'dependencies': ['inventory_pack'],
     'tabs': [
         {
             'id': 'issue_details',

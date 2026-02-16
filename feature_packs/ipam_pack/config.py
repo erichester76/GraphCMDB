@@ -1,6 +1,7 @@
 FEATURE_PACK_CONFIG = {
     'name': 'IPAM Pack',
     'applies_to_labels': ['Network', 'IP_Address', 'Mac_Address'],
+    'dependencies': ['network_pack'],
     'tabs': [
         {
             'id': 'network_details',

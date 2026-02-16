@@ -54,6 +54,15 @@ def parse_property_definition(prop_def):
         }
     raise TypeError(f"Property definition must be a string or dict, got {type(prop_def).__name__}")
 
+def get_feature_pack_modal_override(label, modal_type):
+    for modal in getattr(settings, 'FEATURE_PACK_MODALS', []):
+        if modal.get('type') != modal_type:
+            continue
+        for_labels = modal.get('for_labels', []) or []
+        if not for_labels or label in for_labels:
+            return modal
+    return None
+
 def get_property_names(property_defs):
     names = []
     for prop_def in property_defs:
@@ -432,10 +441,23 @@ def node_edit(request, label, element_id):
     except node_class.DoesNotExist:
         return JsonResponse({'error': 'Node not found'}, status=404)
 
+    modal_override = get_feature_pack_modal_override(label, 'edit')
+    if modal_override and modal_override.get('custom_view'):
+        pack_view = importlib.import_module(modal_override['custom_view'].rsplit('.', 1)[0])
+        custom_view_func = getattr(pack_view, modal_override['custom_view'].rsplit('.', 1)[1])
+        return custom_view_func(request, label, element_id)
+
+    template_name = 'cmdb/partials/node_edit_form.html'
+    if modal_override and modal_override.get('template'):
+        template_name = modal_override['template']
+
     context = {
         'label': label,
         'element_id': element_id,
         'csrf_token': get_token(request),
+        'node': node,
+        'relationships': TypeRegistry.get_metadata(label).get('relationships', {}),
+        'all_labels': TypeRegistry.known_labels(),
     }
 
     if request.method == 'GET':
@@ -485,7 +507,7 @@ def node_edit(request, label, element_id):
         context['current_json'] = json.dumps(current_props, indent=2)  # fallback raw
         context['original_json'] = json.dumps(current_props)
 
-        return render(request, 'cmdb/partials/node_edit_form.html', context)
+        return render(request, template_name, context)
 
     # POST update
     try:
@@ -555,7 +577,7 @@ def node_edit(request, label, element_id):
             'current_properties': request.POST.get('properties', '{}'),
             'error': str(e)
         }
-        return render(request, 'cmdb/partials/node_edit_form.html', context)
+        return render(request, template_name, context)
     
     
 @require_http_methods(["POST"])
@@ -656,6 +678,16 @@ def node_create(request, label):
         if not meta:
             raise ValueError(f"No metadata for label '{label}'")
 
+        modal_override = get_feature_pack_modal_override(label, 'create')
+        if modal_override and modal_override.get('custom_view'):
+            pack_view = importlib.import_module(modal_override['custom_view'].rsplit('.', 1)[0])
+            custom_view_func = getattr(pack_view, modal_override['custom_view'].rsplit('.', 1)[1])
+            return custom_view_func(request, label)
+
+        template_name = 'cmdb/partials/node_create_form.html'
+        if modal_override and modal_override.get('template'):
+            template_name = modal_override['template']
+
         required_props = meta.get('required_properties', [])
         optional_props = meta.get('optional_properties', [])
 
@@ -667,37 +699,38 @@ def node_create(request, label):
             'all_props': required_props + optional_props,
         }
 
-        if request.method == 'GET':
-            # Build dynamic fields from registry
-            required_props = meta.get('required', [])
-            props = meta.get('properties', [])
+        # Build dynamic fields from registry
+        required_props = meta.get('required', [])
+        props = meta.get('properties', [])
 
-            form_fields = []
-            
-            for prop_def in props:
-                parsed_prop = parse_property_definition(prop_def)
-                prop_name = parsed_prop['name']
-                choices = parsed_prop['choices']
-                
-                field_data = {
-                    'key': prop_name,
-                    'value': '',
-                    'type': 'select' if choices else 'text',
-                    'input_name': f'prop_{prop_name}',
-                    'required': prop_name in required_props,
-                }
-                
-                if choices:
-                    field_data['choices'] = choices
-                
-                form_fields.append(field_data)
-            
+        form_fields = []
+        for prop_def in props:
+            parsed_prop = parse_property_definition(prop_def)
+            prop_name = parsed_prop['name']
+            choices = parsed_prop['choices']
+
+            field_data = {
+                'key': prop_name,
+                'value': '',
+                'type': 'select' if choices else 'text',
+                'input_name': f'prop_{prop_name}',
+                'required': prop_name in required_props,
+            }
+
+            if choices:
+                field_data['choices'] = choices
+
+            form_fields.append(field_data)
+
+        if request.method == 'GET':
             context = {
                 'label': label,
                 'csrf_token': get_token(request),
                 'form_fields': form_fields,
+                'relationships': meta.get('relationships', {}),
+                'all_labels': TypeRegistry.known_labels(),
             }
-            return render(request, 'cmdb/partials/node_create_form.html', context)
+            return render(request, template_name, context)
 
         # POST handling
         try:
@@ -711,10 +744,12 @@ def node_create(request, label):
                     if not isinstance(raw_json_dict, dict):
                         raise ValueError("Raw JSON must be a dict/map")
                 except json.JSONDecodeError as e:
-                    return render(request, 'cmdb/partials/node_create_form.html', {
+                    return render(request, template_name, {
                         'label': label,
                         'error': f'Invalid raw JSON: {str(e)}',
                         'form_fields': form_fields,
+                        'relationships': meta.get('relationships', {}),
+                        'all_labels': TypeRegistry.known_labels(),
                     })
 
             # Collect field values (prop_*)
@@ -742,10 +777,12 @@ def node_create(request, label):
             required = meta.get('required_properties', [])
             missing = [r for r in required if r not in new_props]
             if missing:
-                return render(request, 'cmdb/partials/node_create_form.html', {
+                return render(request, template_name, {
                     'label': label,
                     'error': f"Missing required properties: {', '.join(missing)}",
                     'form_fields': form_fields,
+                    'relationships': meta.get('relationships', {}),
+                    'all_labels': TypeRegistry.known_labels(),
                 })
             
             # Save as dict (not string)
@@ -769,16 +806,18 @@ def node_create(request, label):
             })
 
         except Exception as e:
-            return render(request, 'cmdb/partials/node_create_form.html', {
+            return render(request, template_name, {
                 'label': label,
                 'error': str(e),
                 'form_fields': form_fields,
+                'relationships': meta.get('relationships', {}),
+                'all_labels': TypeRegistry.known_labels(),
             })
             
             
     except Exception as e:
         context['error'] = str(e)
-        return render(request, 'cmdb/partials/node_create_form.html', context)
+        return render(request, template_name, context)
 
 @require_http_methods(["POST"])
 @login_required
@@ -896,20 +935,40 @@ def node_disconnect(request, label, element_id):
 @require_http_methods(["GET"])
 def get_target_nodes(request):
     target_label = request.GET.get('target_label', '').strip()
+    query = request.GET.get('q', '').strip().lower()
+    selected_id = request.GET.get('selected_id', '').strip()
+    select_id = request.GET.get('select_id', 'target_id').strip() or 'target_id'
+    select_name = request.GET.get('select_name', 'target_id').strip() or 'target_id'
+    placeholder = request.GET.get('placeholder', 'Select target node').strip() or 'Select target node'
+    required = request.GET.get('required', 'true').lower() != 'false'
     if not target_label:
         return HttpResponse('<option disabled>No label selected</option>')
 
     try:
         node_class = DynamicNode.get_or_create_label(target_label)
-        nodes = node_class.nodes.all()[:50]
+        nodes = node_class.nodes.all()[:200]
 
-        sorted_nodes = sorted(nodes, key=lambda n: n.get_property('name', n.element_id))
+        def node_display(node):
+            props = node.custom_properties or {}
+            if target_label == 'IP_Address' and props.get('address'):
+                return str(props.get('address'))
+            return str(props.get('name') or props.get('primary_ns') or node.element_id)
+
+        if query:
+            nodes = [n for n in nodes if query in node_display(n).lower()]
+
+        sorted_nodes = sorted(nodes, key=node_display)
 
         # Load the partial template manually as string
         template = Template(open('cmdb/templates/cmdb/partials/target_node_options.html').read())
         html = template.render(Context({
             'nodes': sorted_nodes,
             'target_label': target_label,
+            'select_id': select_id,
+            'select_name': select_name,
+            'placeholder': placeholder,
+            'required': required,
+            'selected_id': selected_id,
         }))
 
         return HttpResponse(html)

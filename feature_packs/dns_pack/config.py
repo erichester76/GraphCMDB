@@ -1,6 +1,7 @@
 FEATURE_PACK_CONFIG = {
     'name': 'DNS Pack',
     'applies_to_labels': ['DNS_Zone', 'DNS_Record', 'DNS_View'],
+    'dependencies': ['inventory_pack', 'ipam_pack'],
     'tabs': [
         {
             'id': 'dns_zone_details',
@@ -23,5 +24,19 @@ FEATURE_PACK_CONFIG = {
             'custom_view': 'dns_pack.views.dns_view_details_tab',
             'for_labels': ['DNS_View']
         },
+    ],
+    'modals': [
+        {
+            'type': 'create',
+            'for_labels': ['DNS_Record'],
+            'custom_view': 'dns_pack.views.dns_record_create_modal',
+            'template': 'dns_record_create_modal.html'
+        },
+        {
+            'type': 'edit',
+            'for_labels': ['DNS_Record'],
+            'custom_view': 'dns_pack.views.dns_record_edit_modal',
+            'template': 'dns_record_edit_modal.html'
+        }
     ]
 }

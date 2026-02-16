@@ -1,11 +1,16 @@
-<label for="target_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Target Node</label>
-<select name="target_id" id="target_select" required
+<label for="{{ select_id|default:'target_id' }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Target Node</label>
+<select name="{{ select_name|default:'target_id' }}" id="{{ select_id|default:'target_id' }}" {% if required %}required{% endif %}
         class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
 
-    <option value="">Select target node</option>
+    <option value="">{{ placeholder|default:'Select target node' }}</option>
 {% for node in nodes %}
-    <option value="{{ node.element_id }}">
-        {% if node.custom_properties.name %}
+        <option value="{{ node.element_id }}"
+            data-name="{{ node.custom_properties.name|default:'' }}"
+            data-address="{{ node.custom_properties.address|default:'' }}"
+            {% if selected_id and node.element_id == selected_id %}selected{% endif %}>
+        {% if target_label == 'IP_Address' and node.custom_properties.address %}
+            {{ node.custom_properties.address }} ({{ node.element_id|truncatechars:12 }}...)
+        {% elif node.custom_properties.name %}
             {{ node.custom_properties.name }} ({{ node.element_id|truncatechars:12 }}...)
         {% else %}
             {{ node.element_id|truncatechars:12 }}...

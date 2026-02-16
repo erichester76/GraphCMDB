@@ -1,6 +1,7 @@
 FEATURE_PACK_CONFIG = {
     'name': 'Data Center Pack',
-    'applies_to_labels': ['Rack', 'Row', 'Room'],
+    'applies_to_labels': ['Rack_Unit', 'Rack', 'Row', 'Room'],
+    'dependencies': ['inventory_pack', 'organization_pack'],
     'tabs': [
         {
             'id': 'rack_elevation',

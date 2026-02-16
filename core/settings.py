@@ -73,6 +73,12 @@ STATICFILES_DIRS = [
 # Only needed when you deploy (collectstatic), but good to have:
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Feature pack directories
+FEATURE_PACKS_DIR = BASE_DIR / "feature_packs"
+FEATURE_PACK_STORE_DIR = BASE_DIR / "feature_packs_store"
+FEATURE_PACK_STORE_REPO = "https://github.com/erichester76/GraphCMDB-feature-packs.git"
+FEATURE_PACK_STORE_BRANCH = "main"
+
 ROOT_URLCONF = 'core.urls'
 
 # Authentication settings

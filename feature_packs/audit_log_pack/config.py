@@ -1,6 +1,7 @@
 FEATURE_PACK_CONFIG = {
     'name': 'Audit Log Pack',
     'applies_to_labels': 'all',  # Apply to all node types
+    'dependencies': [],
     'tabs': [
         {
             'id': 'audit_log',

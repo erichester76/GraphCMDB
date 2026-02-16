@@ -55,6 +55,17 @@
                     <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Types Provided</dt>
                     <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ pack.types|length }}</dd>
                 </div>
+
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Dependencies</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {% if pack.config.dependencies %}
+                        {{ pack.config.dependencies|join:", " }}
+                        {% else %}
+                        None
+                        {% endif %}
+                    </dd>
+                </div>
                 
                 {% if pack.last_modified %}
                 <div>

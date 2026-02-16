@@ -392,20 +392,34 @@
 
         // Open modal after successful HTMX swap (only if not an error)
         document.body.addEventListener('htmx:afterSwap', function(event) {
-            // Check if the swapped content is NOT an error
             const target = event.detail.target;
+            if (!target) {
+                return;
+            }
+
+            // Check if the swapped content is NOT an error
             const content = target.querySelector('[data-error-content="true"]');
-            
-            if (!content) {
-                // Find the button that triggered this request
-                const triggerElement = event.detail.elt;
-                const modalId = triggerElement.getAttribute('data-modal-trigger');
-                
-                if (modalId) {
-                    const modal = document.getElementById(modalId);
-                    if (modal && !modal.open) {
-                        modal.showModal();
-                    }
+            if (content) {
+                return;
+            }
+
+            // Find the button that triggered this request
+            const triggerElement = event.detail.elt;
+            let modalId = triggerElement?.getAttribute('data-modal-trigger');
+
+            // Fallback for swaps without a triggering element
+            if (!modalId) {
+                if (target.id === 'create-modal-content') {
+                    modalId = 'create-modal';
+                } else if (target.id === 'edit-modal-content') {
+                    modalId = 'edit-modal';
+                }
+            }
+
+            if (modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal && !modal.open) {
+                    modal.showModal();
                 }
             }
         });

@@ -11,7 +11,7 @@
     hx-target="#create-modal-content"
     hx-swap="innerHTML"
     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-    hx-on::after-request="if(event.detail.successful) { document.getElementById('create-modal').close(); htmx.trigger('#nodes-content', 'refresh'); }">
+    hx-on::after-request="if(event.detail.elt === this && event.detail.successful) { document.getElementById('create-modal').close(); htmx.trigger('#nodes-content', 'refresh'); }">
 
     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 

@@ -1,24 +1,34 @@
 {
+  "DNS_Server": {
+    "display_name": "DNS Server",
+    "category": "DNS",
+    "properties": [
+      "name",
+      "type"
+    ],
+    "required": [
+      "name",
+      "type"
+    ],
+    "relationships": {
+      "HOSTED_ON": {
+        "target": "Device",
+        "direction": "out"
+      }
+    }
+  },
   "DNS_Zone": {
     "display_name": "DNS Zone",
     "category": "DNS",
     "properties": [
-      "name",
-      "ttl",
-      "serial",
-      "primary_ns",
-      "refresh",
-      "retry",
-      "expire",
-      "minimum"
+      "name"
     ],
     "required": [
-      "name",
-      "primary_ns"
+      "name"
     ],
     "relationships": {
-      "HAS_RECORD": {
-        "target": "DNS_Record",
+      "HOSTED_ON": {
+        "target": "DNS_Server",
         "direction": "out"
       }
     }
@@ -29,13 +39,12 @@
     "properties": [
       "name",
       "type",
-      "value",
       "ttl"
     ],
     "required": [
       "name",
       "type",
-      "value"
+      "ttl"
     ],
     "relationships": {
       "PART_OF": {

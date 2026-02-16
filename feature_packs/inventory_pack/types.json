@@ -1,0 +1,43 @@
+{
+  "Device": {
+    "display_name": "Device",
+    "category": "Inventory",
+    "properties": [
+      "name",
+      "serial_number"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {
+      "LOCATED_IN": {
+        "target": "Rack_Unit",
+        "direction": "out"
+      },
+      "INSTANCE_OF": {
+        "target": "Device_Type",
+        "direction": "out"
+      }
+    }
+  },
+  "Device_Type": {
+    "display_name": "Device Type",
+    "category": "Inventory",
+    "properties": [
+      "name",
+      "description",
+      "rack_units",
+      "depth",
+      "status"
+    ],
+    "required": [
+      "name"
+    ],
+    "relationships": {
+      "MANUFACTURED_BY": {
+        "target": "Vendor",
+        "direction": "out"
+      }
+    }
+  }
+}
