@@ -7,50 +7,50 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="space-y-6">
         <!-- Django User Info -->
-        <div class="rounded-lg p-6" :class="darkMode ? 'bg-gray-800' : 'bg-white shadow'">
-            <h2 class="text-2xl font-bold mb-6" :class="darkMode ? 'text-white' : 'text-gray-900'">
+        <div class="rounded-lg p-6 bg-white shadow dark:bg-gray-800">
+            <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
                 User Profile
             </h2>
             
             <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <dt class="text-sm font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">Username</dt>
-                    <dd class="mt-1 text-sm" :class="darkMode ? 'text-gray-200' : 'text-gray-900'">
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Username</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-gray-200">
                         {{ django_user.username }}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">Email</dt>
-                    <dd class="mt-1 text-sm" :class="darkMode ? 'text-gray-200' : 'text-gray-900'">
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-gray-200">
                         {{ django_user.email|default:"Not set" }}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">First Name</dt>
-                    <dd class="mt-1 text-sm" :class="darkMode ? 'text-gray-200' : 'text-gray-900'">
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">First Name</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-gray-200">
                         {{ django_user.first_name|default:"Not set" }}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">Last Name</dt>
-                    <dd class="mt-1 text-sm" :class="darkMode ? 'text-gray-200' : 'text-gray-900'">
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last Name</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-gray-200">
                         {{ django_user.last_name|default:"Not set" }}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">Staff Status</dt>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Staff Status</dt>
                     <dd class="mt-1 text-sm">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                              :class="darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'">
+                              class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                             {% if django_user.is_staff %}Staff{% else %}Regular User{% endif %}
                         </span>
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">Superuser</dt>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Superuser</dt>
                     <dd class="mt-1 text-sm">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                              :class="darkMode ? 'bg-purple-900 text-purple-200' : 'bg-purple-100 text-purple-800'">
+                              class="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
                             {% if django_user.is_superuser %}Yes{% else %}No{% endif %}
                         </span>
                     </dd>
@@ -59,20 +59,19 @@
         </div>
 
         <!-- Groups/Roles -->
-        <div class="rounded-lg p-6" :class="darkMode ? 'bg-gray-800' : 'bg-white shadow'">
-            <h3 class="text-lg font-semibold mb-4" :class="darkMode ? 'text-white' : 'text-gray-900'">
+        <div class="rounded-lg p-6 bg-white shadow dark:bg-gray-800">
+            <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
                 Groups & Roles
             </h3>
             {% if user_groups %}
                 <div class="space-y-2">
                     {% for group in user_groups %}
-                        <div class="flex items-center justify-between p-3 rounded" 
-                             :class="darkMode ? 'bg-gray-700' : 'bg-gray-50'">
+                        <div class="flex items-center justify-between p-3 rounded bg-gray-50 dark:bg-gray-700">
                             <div>
-                                <p class="font-medium" :class="darkMode ? 'text-gray-200' : 'text-gray-900'">
+                                <p class="font-medium text-gray-900 dark:text-gray-200">
                                     {{ group.name }}
                                 </p>
-                                <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
                                     {{ group.permissions.count }} permission(s)
                                 </p>
                             </div>
@@ -80,7 +79,7 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
                     You are not a member of any groups.
                 </p>
             {% endif %}
@@ -88,11 +87,11 @@
 
         <!-- Graph Node Link -->
         {% if user_node %}
-        <div class="rounded-lg p-6" :class="darkMode ? 'bg-gray-800' : 'bg-white shadow'">
-            <h3 class="text-lg font-semibold mb-4" :class="darkMode ? 'text-white' : 'text-gray-900'">
+        <div class="rounded-lg p-6 bg-white shadow dark:bg-gray-800">
+            <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
                 Graph Node
             </h3>
-            <p class="text-sm mb-4" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+            <p class="text-sm mb-4 text-gray-600 dark:text-gray-400">
                 Your user account is linked to a node in the graph database.
             </p>
             <a href="{% url 'cmdb:node_detail' 'User' user_node.element_id %}" 
@@ -101,8 +100,8 @@
             </a>
         </div>
         {% else %}
-        <div class="rounded-lg p-6" :class="darkMode ? 'bg-yellow-800' : 'bg-yellow-50'">
-            <p class="text-sm" :class="darkMode ? 'text-yellow-200' : 'text-yellow-800'">
+        <div class="rounded-lg p-6 bg-yellow-50 dark:bg-yellow-800">
+            <p class="text-sm text-yellow-800 dark:text-yellow-200">
                 Your user account is not yet linked to a node in the graph database. An administrator can create a User node for you.
             </p>
         </div>

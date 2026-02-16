@@ -12,22 +12,22 @@
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="h-full" :class="darkMode ? 'bg-gray-900' : 'bg-gray-50'">
+<body class="h-full bg-gray-50 dark:bg-gray-900">
     <div class="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-md w-full space-y-8">
             <div>
-                <h2 class="mt-6 text-center text-3xl font-extrabold" :class="darkMode ? 'text-white' : 'text-gray-900'">
+                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
                     Graph CMDB
                 </h2>
-                <p class="mt-2 text-center text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+                <p class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
                     Sign in to your account
                 </p>
             </div>
             
             {% if messages %}
-                <div class="rounded-md p-4" :class="darkMode ? 'bg-red-900' : 'bg-red-50'">
+                <div class="rounded-md p-4 bg-red-50 dark:bg-red-900">
                     {% for message in messages %}
-                        <p class="text-sm" :class="darkMode ? 'text-red-200' : 'text-red-800'">{{ message }}</p>
+                        <p class="text-sm text-red-800 dark:text-red-200">{{ message }}</p>
                     {% endfor %}
                 </div>
             {% endif %}
@@ -42,7 +42,7 @@
                                type="text" 
                                required 
                                class="appearance-none rounded-none relative block w-full px-3 py-2 border placeholder-gray-500 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               class="bg-white border-gray-300 text-gray-900 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                                placeholder="Username">
                     </div>
                     <div>
@@ -52,7 +52,7 @@
                                type="password" 
                                required 
                                class="appearance-none rounded-none relative block w-full px-3 py-2 border placeholder-gray-500 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                               :class="darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                               class="bg-white border-gray-300 text-gray-900 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                                placeholder="Password">
                     </div>
                 </div>
@@ -67,8 +67,7 @@
             
             <div class="text-center">
                 <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" 
-                        class="text-sm font-medium" 
-                        :class="darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-500'">
+                        class="text-sm font-medium text-gray-600 hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-300">
                     <span x-show="!darkMode">🌙 Dark Mode</span>
                     <span x-show="darkMode">☀️ Light Mode</span>
                 </button>
