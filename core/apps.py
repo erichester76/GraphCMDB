@@ -1,6 +1,9 @@
 # core/apps.py
 from django.apps import AppConfig, apps
 from django.conf import settings
+from django.core.signals import request_started
+from django.db.models.signals import post_migrate
+from django.dispatch import receiver
 import os
 import importlib.util
 import json
@@ -27,9 +30,23 @@ def reload_feature_packs():
 
 class CoreConfig(AppConfig):
     name = 'core'
+    _permissions_synced = False
 
     def ready(self):
         self.load_feature_packs()
+        request_started.connect(self._sync_permissions_once, dispatch_uid='core.sync_permissions_once')
+        post_migrate.connect(self._sync_permissions_once, dispatch_uid='core.sync_permissions_post_migrate')
+
+    def _sync_permissions_once(self, **kwargs):
+        if self._permissions_synced:
+            return
+        try:
+            from cmdb.permissions import sync_all_node_type_permissions
+            print(f"[DEBUG] Syncing permissions for node types...")
+            sync_all_node_type_permissions()
+            self._permissions_synced = True
+        except Exception as e:
+            print(f"[DEBUG] Could not sync permissions (database may not be ready): {e}")
 
     def load_feature_packs(self):
         """
@@ -157,11 +174,3 @@ class CoreConfig(AppConfig):
                         print(f"[DEBUG] Added modal override: {modal.get('type', 'unknown')}")
         
         print(f"[DEBUG] Feature pack loading complete")
-        
-        # Sync permissions for all registered node types
-        try:
-            from cmdb.permissions import sync_all_node_type_permissions
-            print(f"[DEBUG] Syncing permissions for node types...")
-            sync_all_node_type_permissions()
-        except Exception as e:
-            print(f"[DEBUG] Could not sync permissions (database may not be ready): {e}")

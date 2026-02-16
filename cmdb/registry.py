@@ -1,7 +1,5 @@
 # cmdb/registry.py
 from typing import Dict, Any, List, Optional
-import json
-from pathlib import Path
 
 class TypeRegistry:
     _types: Dict[str, Dict[str, Any]] = {}

@@ -2,7 +2,6 @@
 import re  # Used for label validation in get_or_create_label()
 from neomodel import StructuredNode, JSONProperty, config, db
 from django.conf import settings
-from cmdb.registry import TypeRegistry
 
 config.DATABASE_URL = settings.NEO4J_BOLT_URL
 

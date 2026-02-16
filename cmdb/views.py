@@ -7,14 +7,12 @@ from django.template.loader import render_to_string
 from django.middleware.csrf import get_token
 import json
 from django.views.decorators.http import require_http_methods
-from neomodel import db, RelationshipTo
+from neomodel import db
 from django.template import Context, Template
 from django.conf import settings
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 import importlib
 import pandas as pd
-import io
 
 # Import permission utilities
 from users.views import has_node_permission, node_permission_required
@@ -221,9 +219,8 @@ def dashboard(request):
         try:
             # Use Neomodel's count method instead of raw Cypher
             node_class = DynamicNode.get_or_create_label(label)
-            count = node_class.nodes.count()
+            count = len(node_class.nodes)
             counts[label] = count
-            print(f"Dashboard Neomodel count for {label}: {count}")
         except Exception as e:
             print(f"Error counting {label}: {e}")
             counts[label] = 0
