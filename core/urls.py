@@ -8,5 +8,6 @@ from cmdb.schema import schema
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('graphql/', GraphQLView.as_view(graphiql=True, schema=schema)),
-    path('cmdb/', include('cmdb.urls')),         
+    path('users/', include('users.urls')),
+    path('cmdb/', include('cmdb.urls')),
 ]

@@ -11,7 +11,7 @@
     hx-target="#create-modal-content"
     hx-swap="innerHTML"
     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-    hx-on::after-request="if(event.detail.successful) { document.getElementById('create-modal').close(); htmx.trigger('#nodes-content', 'refresh'); }">
+    hx-on::after-request="if(event.detail.elt === this && event.detail.successful) { document.getElementById('create-modal').close(); htmx.trigger('#nodes-content', 'refresh'); }">
 
     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 
@@ -25,12 +25,29 @@
                             <span class="text-red-600">*</span>
                         {% endif %}
                     </label>
-                    <input type="{{ field.type }}" 
-                        id="{{ field.input_name }}" 
-                        name="{{ field.input_name }}"
-                        value="{{ field.value }}"
-                        {% if field.required %}required{% endif %}
-                        class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    {% if field.type == 'select' %}
+                        <select 
+                            id="{{ field.input_name }}" 
+                            name="{{ field.input_name }}"
+                            {% if field.required %}required{% endif %}
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            {% if not field.required %}
+                                <option value="">-- Select {{ field.key }} --</option>
+                            {% else %}
+                                <option value="" disabled selected>-- Select {{ field.key }} --</option>
+                            {% endif %}
+                            {% for choice in field.choices %}
+                                <option value="{{ choice }}" {% if field.value == choice %}selected{% endif %}>{{ choice }}</option>
+                            {% endfor %}
+                        </select>
+                    {% else %}
+                        <input type="{{ field.type }}" 
+                            id="{{ field.input_name }}" 
+                            name="{{ field.input_name }}"
+                            value="{{ field.value }}"
+                            {% if field.required %}required{% endif %}
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    {% endif %}
                 </div>
             {% endfor %}
         </div>

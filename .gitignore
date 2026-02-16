@@ -7,5 +7,9 @@ node_modules/
 .env
 __pycache__/
 .env.local
+<<<<<<< HEAD
+db.sqlite3
+=======
 feature_packs/*
 feature_packs_store/*
+>>>>>>> origin/main

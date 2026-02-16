@@ -17,12 +17,16 @@ urlpatterns = [
     # Feature pack management URLs
     path('feature-packs/', feature_pack_views.feature_pack_list, name='feature_pack_list'),
     path('feature-packs/api/status/', feature_pack_views.feature_pack_status_api, name='feature_pack_status_api'),
+    path('feature-packs/add/', feature_pack_views.feature_pack_add, name='feature_pack_add'),
+    path('feature-packs/refresh-store/', feature_pack_views.feature_pack_refresh_store, name='feature_pack_refresh_store'),
     path('feature-packs/<str:pack_name>/', feature_pack_views.feature_pack_detail, name='feature_pack_detail'),
     path('feature-packs/<str:pack_name>/enable/', feature_pack_views.feature_pack_enable, name='feature_pack_enable'),
     path('feature-packs/<str:pack_name>/disable/', feature_pack_views.feature_pack_disable, name='feature_pack_disable'),
+    path('feature-packs/<str:pack_name>/delete/', feature_pack_views.feature_pack_delete, name='feature_pack_delete'),
 
     path('<str:label>/', views.nodes_list, name='nodes_list'),
     path('<str:label>/create/', views.node_create, name='node_create'),
+    path('<str:label>/import/', views.node_import, name='node_import'),
     path('<str:label>/<str:element_id>/', views.node_detail, name='node_detail'),
     path('<str:label>/<str:element_id>/edit/', views.node_edit, name='node_edit'),
     path('<str:label>/<str:element_id>/delete/', views.node_delete, name='node_delete'),

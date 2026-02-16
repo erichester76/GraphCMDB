@@ -14,6 +14,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_htmx',
     'graphene_django',          # GraphQL support
+    'users.apps.UsersConfig',   # Users & RBAC
     'cmdb.apps.CmdbConfig',     # our app
     'core.apps.CoreConfig',     # core app with feature pack loading
 ]
@@ -44,6 +45,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.csrf',
                 'cmdb.context_processors.categories_context',
+                'cmdb.context_processors.user_permissions_context',
             ],
         },
     },
@@ -71,4 +73,23 @@ STATICFILES_DIRS = [
 # Only needed when you deploy (collectstatic), but good to have:
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Feature pack directories
+FEATURE_PACKS_DIR = BASE_DIR / "feature_packs"
+FEATURE_PACK_STORE_DIR = BASE_DIR / "feature_packs_store"
+FEATURE_PACK_STORE_REPO = "https://github.com/erichester76/GraphCMDB-feature-packs.git"
+FEATURE_PACK_STORE_BRANCH = "main"
+
 ROOT_URLCONF = 'core.urls'
+
+# Authentication settings
+LOGIN_URL = '/users/login/'
+LOGIN_REDIRECT_URL = '/cmdb/'
+LOGOUT_REDIRECT_URL = '/users/login/'
+
+# Database configuration for Django auth
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}

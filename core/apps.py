@@ -1,5 +1,5 @@
 # core/apps.py
-from django.apps import AppConfig
+from django.apps import AppConfig, apps
 from django.conf import settings
 import os
 import importlib.util
@@ -7,6 +7,23 @@ import json
 from cmdb.registry import TypeRegistry
 from django.urls import path, include
 import sys
+
+
+def reload_feature_packs():
+    feature_packs_dir = os.path.join(settings.BASE_DIR, 'feature_packs')
+
+    TypeRegistry.clear()
+    settings.FEATURE_PACK_TABS = []
+    settings.FEATURE_PACK_MODALS = []
+
+    existing_dirs = settings.TEMPLATES[0]['DIRS']
+    settings.TEMPLATES[0]['DIRS'] = [
+        directory for directory in existing_dirs
+        if not str(directory).startswith(feature_packs_dir)
+    ]
+
+    core_app = apps.get_app_config('core')
+    core_app.load_feature_packs()
 
 class CoreConfig(AppConfig):
     name = 'core'
@@ -23,7 +40,6 @@ class CoreConfig(AppConfig):
             sync_feature_pack_to_db, 
             should_sync_pack,
             FeaturePackNode,
-            TypeDefinitionNode
         )
         
         feature_packs_dir = os.path.join(settings.BASE_DIR, 'feature_packs')
@@ -110,8 +126,8 @@ class CoreConfig(AppConfig):
                 # Register types
                 if types_data:
                     for label, metadata in types_data.items():
-                        TypeRegistry.register(label, metadata)
-                        print(f"[DEBUG] Registered type: {label}")
+                        TypeRegistry.register(label, metadata, pack_name=pack_name)
+                        print(f"[DEBUG] Registered type: {label} from pack: {pack_name}")
 
                 # Add template dir
                 template_dir = os.path.join(pack_path, 'templates')
@@ -129,5 +145,23 @@ class CoreConfig(AppConfig):
                         tab['original_for_labels'] = tab.get('for_labels', [])
                         settings.FEATURE_PACK_TABS.append(tab)
                         print(f"[DEBUG] Added tab: {tab.get('id', 'unknown')}")
+
+                # Register modal overrides
+                if config_data and 'modals' in config_data:
+                    if not hasattr(settings, 'FEATURE_PACK_MODALS'):
+                        settings.FEATURE_PACK_MODALS = []
+                    for modal in config_data['modals']:
+                        modal['pack_name'] = pack_name
+                        modal['original_for_labels'] = modal.get('for_labels', [])
+                        settings.FEATURE_PACK_MODALS.append(modal)
+                        print(f"[DEBUG] Added modal override: {modal.get('type', 'unknown')}")
         
         print(f"[DEBUG] Feature pack loading complete")
+        
+        # Sync permissions for all registered node types
+        try:
+            from cmdb.permissions import sync_all_node_type_permissions
+            print(f"[DEBUG] Syncing permissions for node types...")
+            sync_all_node_type_permissions()
+        except Exception as e:
+            print(f"[DEBUG] Could not sync permissions (database may not be ready): {e}")

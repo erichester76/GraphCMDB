@@ -10,7 +10,7 @@
             hx-get="{% url 'cmdb:node_edit' label node.element_id %}" 
             hx-target="#edit-modal-content"
             hx-swap="innerHTML"
-            onclick="document.getElementById('edit-modal').showModal()"
+            data-modal-trigger="edit-modal"
             class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-800">
             Edit
         </button>
@@ -179,8 +179,7 @@
     </div>
 <!-- Edit Modal (placeholder - filled by HTMX) -->
 <dialog id="edit-modal" 
-        class="p-6 rounded-lg shadow-xl max-w-lg w-full backdrop:bg-black backdrop:bg-opacity-50"
-        :class="darkMode ? 'dark bg-gray-800 text-white' : 'bg-white'">
+    class="p-6 rounded-lg shadow-xl max-w-lg w-full backdrop:bg-black backdrop:bg-opacity-50 bg-white dark:bg-gray-800 dark:text-white">
     <div id="edit-modal-content"></div>
 </dialog>
 </div>

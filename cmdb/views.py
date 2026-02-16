@@ -1,5 +1,5 @@
 # cmdb/views.py
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .models import DynamicNode
 from .registry import TypeRegistry
 from django.http import HttpResponse, JsonResponse
@@ -10,7 +10,18 @@ from django.views.decorators.http import require_http_methods
 from neomodel import db, RelationshipTo
 from django.template import Context, Template
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 import importlib
+import pandas as pd
+import io
+
+# Import permission utilities
+from users.views import has_node_permission, node_permission_required
+
+# Constants for import functionality
+RELATIONSHIP_SUFFIX = '_names'
+CSV_ROW_OFFSET = 2  # Offset for error messages: 0-based index + header row
 
 # Import audit log utility if available
 try:
@@ -25,6 +36,40 @@ except ImportError:
     # If audit log pack is not available, use a no-op function
     def create_audit_entry(*args, **kwargs):
         pass
+
+def parse_property_definition(prop_def):
+    """
+    Parse a property definition which can be either:
+    - A string: "property_name"
+    - A dict: {"name": "property_name", "choices": ["choice1", "choice2"]}
+    
+    Returns a dict with keys: name, choices (list or None)
+    """
+    if isinstance(prop_def, str):
+        return {'name': prop_def, 'choices': None}
+    elif isinstance(prop_def, dict):
+        return {
+            'name': prop_def.get('name', ''),
+            'choices': prop_def.get('choices', None)
+        }
+    raise TypeError(f"Property definition must be a string or dict, got {type(prop_def).__name__}")
+
+def get_feature_pack_modal_override(label, modal_type):
+    for modal in getattr(settings, 'FEATURE_PACK_MODALS', []):
+        if modal.get('type') != modal_type:
+            continue
+        for_labels = modal.get('for_labels', []) or []
+        if not for_labels or label in for_labels:
+            return modal
+    return None
+
+def get_property_names(property_defs):
+    names = []
+    for prop_def in property_defs:
+        parsed_prop = parse_property_definition(prop_def)
+        if parsed_prop['name']:
+            names.append(parsed_prop['name'])
+    return names
 
 def build_properties_list_with_relationships(node):
     """
@@ -86,11 +131,12 @@ def type_register(request):
             types_data = []
             for label in TypeRegistry.known_labels():
                 meta = TypeRegistry.get_metadata(label)
+                property_names = get_property_names(meta.get('properties', []))
                 types_data.append({
                     'label': label,
                     'display_name': meta.get('display_name', '-'),
                     'required': ', '.join(meta.get('required', [])) or '-',
-                    'properties': ', '.join(meta.get('properties', [])) or '-',
+                    'properties': ', '.join(property_names) or '-',
                     'description': meta.get('description', '-'),
                 })
 
@@ -153,11 +199,12 @@ def type_register(request):
     types_data = []
     for label in TypeRegistry.known_labels():
         meta = TypeRegistry.get_metadata(label)
+        property_names = get_property_names(meta.get('properties', []))
         types_data.append({
             'label': label,
             'display_name': meta.get('display_name', '-'),
             'required': ', '.join(meta.get('required', [])) or '-',
-            'properties': ', '.join(meta.get('properties', [])) or '-',
+            'properties': ', '.join(property_names) or '-',
             'description': meta.get('description', '-'),
         })
 
@@ -195,6 +242,8 @@ def dashboard(request):
     
     return render(request, 'cmdb/dashboard.html', context)
 
+@login_required
+@node_permission_required('view')
 def nodes_list(request, label):
     """
     List view for nodes of a specific label
@@ -209,8 +258,8 @@ def nodes_list(request, label):
     
     # Get column configuration from type registry
     metadata = TypeRegistry.get_metadata(label)
-    default_columns = metadata.get('columns', [])
-    all_properties = metadata.get('properties', [])
+    default_columns = get_property_names(metadata.get('columns', []))
+    all_properties = get_property_names(metadata.get('properties', []))
     
     # Collect all relationship types found across all nodes
     all_relationship_types = set()
@@ -301,6 +350,8 @@ def node_add_relationship_form(request, label, element_id):
     except Exception as e:
         return HttpResponse(f'<div class="p-4 bg-red-100 text-red-800 rounded">Error loading form: {str(e)}</div>')
     
+@login_required
+@node_permission_required('view')
 def node_detail(request, label, element_id):
     try:
         node_class = DynamicNode.get_or_create_label(label)
@@ -376,6 +427,8 @@ def node_detail(request, label, element_id):
         return render(request, 'cmdb/node_detail.html', {'error': f"Error: {str(e)}"})
     
 @require_http_methods(["GET", "POST"])
+@login_required
+@node_permission_required('change')
 def node_edit(request, label, element_id):
     
     try:
@@ -388,37 +441,73 @@ def node_edit(request, label, element_id):
     except node_class.DoesNotExist:
         return JsonResponse({'error': 'Node not found'}, status=404)
 
+    modal_override = get_feature_pack_modal_override(label, 'edit')
+    if modal_override and modal_override.get('custom_view'):
+        pack_view = importlib.import_module(modal_override['custom_view'].rsplit('.', 1)[0])
+        custom_view_func = getattr(pack_view, modal_override['custom_view'].rsplit('.', 1)[1])
+        return custom_view_func(request, label, element_id)
+
+    template_name = 'cmdb/partials/node_edit_form.html'
+    if modal_override and modal_override.get('template'):
+        template_name = modal_override['template']
+
     context = {
         'label': label,
         'element_id': element_id,
         'csrf_token': get_token(request),
+        'node': node,
+        'relationships': TypeRegistry.get_metadata(label).get('relationships', {}),
+        'all_labels': TypeRegistry.known_labels(),
     }
 
     if request.method == 'GET':
         current_props = node.custom_properties or {}
         
+        # Get metadata to check for property definitions with choices
+        meta = TypeRegistry.get_metadata(label)
+        props_metadata = meta.get('properties', [])
+        
+        # Build a map of property names to their definitions
+        prop_choices_map = {}
+        for prop_def in props_metadata:
+            parsed_prop = parse_property_definition(prop_def)
+            if parsed_prop['choices']:
+                prop_choices_map[parsed_prop['name']] = parsed_prop['choices']
+        
         # Build list of form fields
         form_fields = []
         for key, value in current_props.items():
             field_type = 'text'
-            if isinstance(value, bool):
+            choices = None
+            
+            # Check if this property has predefined choices
+            if key in prop_choices_map:
+                field_type = 'select'
+                choices = prop_choices_map[key]
+            elif isinstance(value, bool):
                 field_type = 'checkbox'
             elif isinstance(value, (int, float)):
                 field_type = 'number'
             elif isinstance(value, list):
                 field_type = 'textarea'  # comma-separated
-            form_fields.append({
+            
+            field_data = {
                 'key': key,
                 'value': value,
                 'type': field_type,
                 'input_name': f'prop_{key}',  # for POST collection
-            })
+            }
+            
+            if choices:
+                field_data['choices'] = choices
+            
+            form_fields.append(field_data)
 
         context['form_fields'] = form_fields
         context['current_json'] = json.dumps(current_props, indent=2)  # fallback raw
         context['original_json'] = json.dumps(current_props)
 
-        return render(request, 'cmdb/partials/node_edit_form.html', context)
+        return render(request, template_name, context)
 
     # POST update
     try:
@@ -488,10 +577,12 @@ def node_edit(request, label, element_id):
             'current_properties': request.POST.get('properties', '{}'),
             'error': str(e)
         }
-        return render(request, 'cmdb/partials/node_edit_form.html', context)
+        return render(request, template_name, context)
     
     
 @require_http_methods(["POST"])
+@login_required
+@node_permission_required('delete')
 def node_delete(request, label, element_id):
     try:
         node_class = DynamicNode.get_or_create_label(label)
@@ -579,11 +670,23 @@ def node_delete(request, label, element_id):
         })
         
 @require_http_methods(["GET", "POST"])
+@login_required
+@node_permission_required('add')
 def node_create(request, label):
     try:
         meta = TypeRegistry.get_metadata(label)
         if not meta:
             raise ValueError(f"No metadata for label '{label}'")
+
+        modal_override = get_feature_pack_modal_override(label, 'create')
+        if modal_override and modal_override.get('custom_view'):
+            pack_view = importlib.import_module(modal_override['custom_view'].rsplit('.', 1)[0])
+            custom_view_func = getattr(pack_view, modal_override['custom_view'].rsplit('.', 1)[1])
+            return custom_view_func(request, label)
+
+        template_name = 'cmdb/partials/node_create_form.html'
+        if modal_override and modal_override.get('template'):
+            template_name = modal_override['template']
 
         required_props = meta.get('required_properties', [])
         optional_props = meta.get('optional_properties', [])
@@ -596,28 +699,38 @@ def node_create(request, label):
             'all_props': required_props + optional_props,
         }
 
-        if request.method == 'GET':
-            # Build dynamic fields from registry
-            required_props = meta.get('required', [])
-            props = meta.get('properties', [])
+        # Build dynamic fields from registry
+        required_props = meta.get('required', [])
+        props = meta.get('properties', [])
 
-            form_fields = []
-            
-            for key in props:
-                form_fields.append({
-                    'key': key,
-                    'value': '',
-                    'type': 'text',
-                    'input_name': f'prop_{key}',
-                    'required': key in required_props,
-                })
-            
+        form_fields = []
+        for prop_def in props:
+            parsed_prop = parse_property_definition(prop_def)
+            prop_name = parsed_prop['name']
+            choices = parsed_prop['choices']
+
+            field_data = {
+                'key': prop_name,
+                'value': '',
+                'type': 'select' if choices else 'text',
+                'input_name': f'prop_{prop_name}',
+                'required': prop_name in required_props,
+            }
+
+            if choices:
+                field_data['choices'] = choices
+
+            form_fields.append(field_data)
+
+        if request.method == 'GET':
             context = {
                 'label': label,
                 'csrf_token': get_token(request),
                 'form_fields': form_fields,
+                'relationships': meta.get('relationships', {}),
+                'all_labels': TypeRegistry.known_labels(),
             }
-            return render(request, 'cmdb/partials/node_create_form.html', context)
+            return render(request, template_name, context)
 
         # POST handling
         try:
@@ -631,10 +744,12 @@ def node_create(request, label):
                     if not isinstance(raw_json_dict, dict):
                         raise ValueError("Raw JSON must be a dict/map")
                 except json.JSONDecodeError as e:
-                    return render(request, 'cmdb/partials/node_create_form.html', {
+                    return render(request, template_name, {
                         'label': label,
                         'error': f'Invalid raw JSON: {str(e)}',
                         'form_fields': form_fields,
+                        'relationships': meta.get('relationships', {}),
+                        'all_labels': TypeRegistry.known_labels(),
                     })
 
             # Collect field values (prop_*)
@@ -662,10 +777,12 @@ def node_create(request, label):
             required = meta.get('required_properties', [])
             missing = [r for r in required if r not in new_props]
             if missing:
-                return render(request, 'cmdb/partials/node_create_form.html', {
+                return render(request, template_name, {
                     'label': label,
                     'error': f"Missing required properties: {', '.join(missing)}",
                     'form_fields': form_fields,
+                    'relationships': meta.get('relationships', {}),
+                    'all_labels': TypeRegistry.known_labels(),
                 })
             
             # Save as dict (not string)
@@ -689,18 +806,22 @@ def node_create(request, label):
             })
 
         except Exception as e:
-            return render(request, 'cmdb/partials/node_create_form.html', {
+            return render(request, template_name, {
                 'label': label,
                 'error': str(e),
                 'form_fields': form_fields,
+                'relationships': meta.get('relationships', {}),
+                'all_labels': TypeRegistry.known_labels(),
             })
             
             
     except Exception as e:
         context['error'] = str(e)
-        return render(request, 'cmdb/partials/node_create_form.html', context)
+        return render(request, template_name, context)
 
-@require_http_methods(["POST"]) 
+@require_http_methods(["POST"])
+@login_required
+@node_permission_required('change')
 def node_connect(request, label, element_id):
     try:
         rel_type = request.POST.get('rel_type', '').strip().upper()
@@ -755,6 +876,8 @@ def node_connect(request, label, element_id):
         })
         
 @require_http_methods(["POST"])
+@login_required
+@node_permission_required('change')
 def node_disconnect(request, label, element_id):
     try:
         rel_type = request.POST.get('rel_type', '').strip().upper()
@@ -812,20 +935,40 @@ def node_disconnect(request, label, element_id):
 @require_http_methods(["GET"])
 def get_target_nodes(request):
     target_label = request.GET.get('target_label', '').strip()
+    query = request.GET.get('q', '').strip().lower()
+    selected_id = request.GET.get('selected_id', '').strip()
+    select_id = request.GET.get('select_id', 'target_id').strip() or 'target_id'
+    select_name = request.GET.get('select_name', 'target_id').strip() or 'target_id'
+    placeholder = request.GET.get('placeholder', 'Select target node').strip() or 'Select target node'
+    required = request.GET.get('required', 'true').lower() != 'false'
     if not target_label:
         return HttpResponse('<option disabled>No label selected</option>')
 
     try:
         node_class = DynamicNode.get_or_create_label(target_label)
-        nodes = node_class.nodes.all()[:50]
+        nodes = node_class.nodes.all()[:200]
 
-        sorted_nodes = sorted(nodes, key=lambda n: n.get_property('name', n.element_id))
+        def node_display(node):
+            props = node.custom_properties or {}
+            if target_label == 'IP_Address' and props.get('address'):
+                return str(props.get('address'))
+            return str(props.get('name') or props.get('primary_ns') or node.element_id)
+
+        if query:
+            nodes = [n for n in nodes if query in node_display(n).lower()]
+
+        sorted_nodes = sorted(nodes, key=node_display)
 
         # Load the partial template manually as string
         template = Template(open('cmdb/templates/cmdb/partials/target_node_options.html').read())
         html = template.render(Context({
             'nodes': sorted_nodes,
             'target_label': target_label,
+            'select_id': select_id,
+            'select_name': select_name,
+            'placeholder': placeholder,
+            'required': required,
+            'selected_id': selected_id,
         }))
 
         return HttpResponse(html)
@@ -882,3 +1025,212 @@ def audit_log_list(request):
         return HttpResponse(content_html + header_html)
     
     return render(request, 'cmdb/audit_log_list.html', context)
+
+@require_http_methods(["GET", "POST"])
+@login_required
+@node_permission_required('add')
+def node_import(request, label):
+    """
+    Handle bulk node import from CSV/XLS files
+    GET: Display import form and download template
+    POST: Process uploaded file and create nodes
+    """
+    try:
+        meta = TypeRegistry.get_metadata(label)
+        if not meta:
+            raise ValueError(f"No metadata for label '{label}'")
+        
+        # Get properties and relationships from metadata
+        properties = meta.get('properties', [])
+        required_props = meta.get('required', [])
+        relationships = meta.get('relationships', {})
+        
+        context = {
+            'label': label,
+            'csrf_token': get_token(request),
+            'properties': properties,
+            'required_props': required_props,
+            'relationships': relationships,
+            'all_labels': TypeRegistry.known_labels(),
+        }
+        
+        if request.method == 'GET':
+            # Check if downloading template
+            if request.GET.get('download_template') == 'true':
+                # Create template CSV with headers
+                headers = properties.copy()
+                # Add relationship columns
+                for rel_type, rel_info in relationships.items():
+                    headers.append(f"{rel_type}{RELATIONSHIP_SUFFIX}")
+                
+                # Create DataFrame with headers only
+                df = pd.DataFrame(columns=headers)
+                
+                # Return as CSV download
+                response = HttpResponse(content_type='text/csv')
+                response['Content-Disposition'] = f'attachment; filename="{label}_import_template.csv"'
+                df.to_csv(response, index=False)
+                return response
+            
+            # Otherwise show the import form
+            return render(request, 'cmdb/node_import.html', context)
+        
+        # POST: Process file upload
+        if 'import_file' not in request.FILES:
+            context['error'] = 'No file uploaded'
+            return render(request, 'cmdb/node_import.html', context)
+        
+        uploaded_file = request.FILES['import_file']
+        file_ext = uploaded_file.name.split('.')[-1].lower()
+        
+        # Read file into DataFrame
+        try:
+            if file_ext == 'csv':
+                df = pd.read_csv(uploaded_file)
+            elif file_ext in ['xls', 'xlsx']:
+                df = pd.read_excel(uploaded_file)
+            else:
+                context['error'] = 'Unsupported file format. Please upload CSV or Excel file.'
+                return render(request, 'cmdb/node_import.html', context)
+        except Exception as e:
+            context['error'] = f'Error reading file: {str(e)}'
+            return render(request, 'cmdb/node_import.html', context)
+        
+        # Process each row
+        node_class = DynamicNode.get_or_create_label(label)
+        created_nodes = []
+        errors = []
+        relationship_queue = []  # Store relationships to create after all nodes
+        
+        for idx, row in df.iterrows():
+            try:
+                # Build properties dict from row
+                node_props = {}
+                row_relationships = {}
+                
+                for col in df.columns:
+                    value = row[col]
+                    
+                    # Skip NaN values
+                    if pd.isna(value):
+                        continue
+                    
+                    # Check if this is a relationship column
+                    if col.endswith(RELATIONSHIP_SUFFIX):
+                        rel_type = col[:-len(RELATIONSHIP_SUFFIX)]  # Remove suffix
+                        # Relationship types in metadata are uppercase (e.g., BELONGS_TO)
+                        # Check if this matches a known relationship (case-insensitive)
+                        rel_type_upper = rel_type.upper()
+                        if rel_type_upper in relationships:
+                            # Store with uppercase key for consistency
+                            row_relationships[rel_type_upper] = str(value)
+                        continue
+                    
+                    # Regular property
+                    if col in properties:
+                        # Type coercion
+                        if isinstance(value, (int, float, bool)):
+                            node_props[col] = value
+                        else:
+                            node_props[col] = str(value)
+                
+                # Validate required properties
+                missing = [r for r in required_props if r not in node_props or not node_props[r]]
+                if missing:
+                    errors.append(f"Row {idx + CSV_ROW_OFFSET}: Missing required properties: {', '.join(missing)}")
+                    continue
+                
+                # Create node
+                node = node_class(custom_properties=node_props).save()
+                created_nodes.append(node)
+                
+                # Queue relationships for creation
+                if row_relationships:
+                    relationship_queue.append({
+                        'node': node,
+                        'relationships': row_relationships
+                    })
+                
+                # Create audit log entry
+                node_name = node_props.get('name', '')
+                create_audit_entry(
+                    action='create',
+                    node_label=label,
+                    node_id=node.element_id,
+                    node_name=node_name,
+                    user=request.user.username if request.user.is_authenticated else 'System',
+                    changes=f"Imported from file with properties: {', '.join(node_props.keys())}"
+                )
+                
+            except Exception as e:
+                errors.append(f"Row {idx + CSV_ROW_OFFSET}: {str(e)}")
+        
+        # Process queued relationships
+        for item in relationship_queue:
+            node = item['node']
+            node_name = (node.custom_properties or {}).get('name', node.element_id)
+            
+            for rel_type, target_names in item['relationships'].items():
+                # Split multiple target names by comma
+                target_name_list = [name.strip() for name in target_names.split(',')]
+                
+                # Get target label from relationships metadata
+                rel_info = relationships.get(rel_type, {})
+                target_label = rel_info.get('target')  # Field is 'target' not 'target_label'
+                
+                if not target_label:
+                    errors.append(f"Node '{node_name}': Unknown relationship type '{rel_type}'")
+                    continue
+                
+                # Validate target_label to prevent injection
+                # Target labels come from metadata but validate for safety
+                if not target_label or not target_label.replace('_', '').isalnum():
+                    errors.append(f"Node '{node_name}': Invalid target label '{target_label}' for relationship '{rel_type}'")
+                    continue
+                
+                # Find target nodes by name
+                target_class = DynamicNode.get_or_create_label(target_label)
+                
+                for target_name in target_name_list:
+                    # Query for target node by name property
+                    query = f"""
+                        MATCH (n:`{target_label}`)
+                        WHERE n.custom_properties IS NOT NULL
+                        AND apoc.convert.fromJsonMap(n.custom_properties).name = $name
+                        RETURN elementId(n) AS eid
+                        LIMIT 1
+                    """
+                    result, _ = db.cypher_query(query, {'name': target_name})
+                    
+                    if not result:
+                        errors.append(f"Node '{node_name}': Target node '{target_name}' of type '{target_label}' not found for relationship '{rel_type}'")
+                        continue
+                    
+                    target_id = result[0][0]
+                    
+                    # Create relationship
+                    try:
+                        node_class.connect_nodes(
+                            node.element_id, label,
+                            rel_type,  # Already uppercase from storage
+                            target_id, target_label
+                        )
+                    except Exception as e:
+                        errors.append(f"Node '{node_name}': Failed to create relationship '{rel_type}' to '{target_name}': {str(e)}")
+        
+        # Prepare success/error summary
+        context['success'] = True
+        context['created_count'] = len(created_nodes)
+        context['error_count'] = len(errors)
+        context['errors'] = errors
+        
+        return render(request, 'cmdb/node_import.html', context)
+        
+    except Exception as e:
+        context = {
+            'label': label,
+            'csrf_token': get_token(request),
+            'error': f'Unexpected error: {str(e)}',
+            'all_labels': TypeRegistry.known_labels(),
+        }
+        return render(request, 'cmdb/node_import.html', context)
