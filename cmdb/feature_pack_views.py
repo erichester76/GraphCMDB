@@ -130,6 +130,28 @@ def get_pack_config(pack):
     return config
 
 
+def normalize_dependencies(config: dict) -> list:
+    dependencies = config.get('dependencies') if isinstance(config, dict) else None
+    if not dependencies:
+        return []
+    if isinstance(dependencies, str):
+        dependencies = [dependencies]
+    if not isinstance(dependencies, (list, tuple, set)):
+        return []
+    normalized = []
+    for dependency in dependencies:
+        if isinstance(dependency, str):
+            dep = dependency.strip()
+            if dep:
+                normalized.append(dep)
+    return normalized
+
+
+def get_dependency_status() -> dict:
+    packs = FeaturePackNode.get_all_packs()
+    return {pack.name: pack.enabled for pack in packs}
+
+
 @login_required
 @user_passes_test(is_staff_user)
 def feature_pack_list(request):
@@ -269,6 +291,25 @@ def feature_pack_add(request):
     if os.path.exists(dest_path):
         messages.warning(request, f'Feature pack "{pack_name}" is already installed.')
         return redirect('cmdb:feature_pack_list')
+
+    config_data = load_pack_config_from_path(source_path, pack_name)
+    dependencies = normalize_dependencies(config_data)
+    if dependencies:
+        dependency_status = get_dependency_status()
+        missing = [dep for dep in dependencies if dep not in dependency_status]
+        disabled = [dep for dep in dependencies if dep in dependency_status and not dependency_status[dep]]
+        if missing or disabled:
+            detail_parts = []
+            if missing:
+                detail_parts.append(f'missing: {", ".join(missing)}')
+            if disabled:
+                detail_parts.append(f'disabled: {", ".join(disabled)}')
+            details = "; ".join(detail_parts)
+            messages.error(
+                request,
+                f'Cannot install "{pack_name}" until dependencies are installed and enabled ({details}).'
+            )
+            return redirect('cmdb:feature_pack_list')
 
     try:
         shutil.copytree(source_path, dest_path)
