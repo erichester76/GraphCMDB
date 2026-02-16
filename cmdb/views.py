@@ -54,6 +54,14 @@ def parse_property_definition(prop_def):
         }
     raise TypeError(f"Property definition must be a string or dict, got {type(prop_def).__name__}")
 
+def get_property_names(property_defs):
+    names = []
+    for prop_def in property_defs:
+        parsed_prop = parse_property_definition(prop_def)
+        if parsed_prop['name']:
+            names.append(parsed_prop['name'])
+    return names
+
 def build_properties_list_with_relationships(node):
     """
     Helper function to build a properties list that includes both regular properties
@@ -114,11 +122,12 @@ def type_register(request):
             types_data = []
             for label in TypeRegistry.known_labels():
                 meta = TypeRegistry.get_metadata(label)
+                property_names = get_property_names(meta.get('properties', []))
                 types_data.append({
                     'label': label,
                     'display_name': meta.get('display_name', '-'),
                     'required': ', '.join(meta.get('required', [])) or '-',
-                    'properties': ', '.join(meta.get('properties', [])) or '-',
+                    'properties': ', '.join(property_names) or '-',
                     'description': meta.get('description', '-'),
                 })
 
@@ -181,11 +190,12 @@ def type_register(request):
     types_data = []
     for label in TypeRegistry.known_labels():
         meta = TypeRegistry.get_metadata(label)
+        property_names = get_property_names(meta.get('properties', []))
         types_data.append({
             'label': label,
             'display_name': meta.get('display_name', '-'),
             'required': ', '.join(meta.get('required', [])) or '-',
-            'properties': ', '.join(meta.get('properties', [])) or '-',
+            'properties': ', '.join(property_names) or '-',
             'description': meta.get('description', '-'),
         })
 
@@ -239,8 +249,8 @@ def nodes_list(request, label):
     
     # Get column configuration from type registry
     metadata = TypeRegistry.get_metadata(label)
-    default_columns = metadata.get('columns', [])
-    all_properties = metadata.get('properties', [])
+    default_columns = get_property_names(metadata.get('columns', []))
+    all_properties = get_property_names(metadata.get('properties', []))
     
     # Collect all relationship types found across all nodes
     all_relationship_types = set()
