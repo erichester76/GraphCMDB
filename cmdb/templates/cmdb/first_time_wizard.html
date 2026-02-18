@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}First-Time Wizard - Graph CMDB{% endblock %}
+
+{% block page_title %}First-Time Wizard{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8" x-data="{ useDataCenter: false, useDns: false, useIpam: false, useDhcp: false, useVirtualization: false, useItil: false, useAuditLog: false }">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Welcome</h2>
+        <p class="mt-2 text-gray-600 dark:text-gray-300">
+            Answer a few questions and Graph CMDB will install the right feature packs and create your first records.
+        </p>
+    </div>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Environment Questions</h3>
+            <label class="flex items-center gap-3">
+                <input type="checkbox" class="h-4 w-4" x-model="useDataCenter">
+                <span class="text-gray-700 dark:text-gray-200">Do you have a data center?</span>
+            </label>
+            <label class="flex items-center gap-3">
+                <input type="checkbox" class="h-4 w-4" x-model="useDns">
+                <span class="text-gray-700 dark:text-gray-200">Do you need to track domain names (DNS)?</span>
+            </label>
+            <label class="flex items-center gap-3">
+                <input type="checkbox" class="h-4 w-4" x-model="useIpam">
+                <span class="text-gray-700 dark:text-gray-200">Do you need to track IP addresses and networks?</span>
+            </label>
+            <label class="flex items-center gap-3">
+                <input type="checkbox" class="h-4 w-4" x-model="useDhcp">
+                <span class="text-gray-700 dark:text-gray-200">Do you use DHCP?</span>
+            </label>
+            <label class="flex items-center gap-3">
+                <input type="checkbox" class="h-4 w-4" x-model="useVirtualization">
+                <span class="text-gray-700 dark:text-gray-200">Do you have virtual machines?</span>
+            </label>
+            <label class="flex items-center gap-3">
+                <input type="checkbox" class="h-4 w-4" x-model="useItil">
+                <span class="text-gray-700 dark:text-gray-200">Do you utilize ITIL/ITSM processes?</span>
+            </label>
+            <label class="flex items-center gap-3">
+                <input type="checkbox" class="h-4 w-4" x-model="useAuditLog">
+                <span class="text-gray-700 dark:text-gray-200">Would you like to track all changes in an audit log?</span>
+            </label>
+
+            <div class="hidden">
+                <input type="hidden" name="install_org" value="on">
+
+                <input type="hidden" name="install_data_center" value="">
+                <input type="checkbox" name="install_data_center" value="on" class="h-4 w-4" x-model="useDataCenter">
+
+                <input type="hidden" name="install_dns" value="">
+                <input type="checkbox" name="install_dns" value="on" class="h-4 w-4" x-model="useDns">
+
+                <input type="hidden" name="install_ipam" value="">
+                <input type="checkbox" name="install_ipam" value="on" class="h-4 w-4" x-model="useIpam">
+
+                <input type="hidden" name="install_dhcp" value="">
+                <input type="checkbox" name="install_dhcp" value="on" class="h-4 w-4" x-model="useDhcp">
+
+                <input type="hidden" name="install_virtualization" value="">
+                <input type="checkbox" name="install_virtualization" value="on" class="h-4 w-4" x-model="useVirtualization">
+
+                <input type="hidden" name="install_itsm" value="">
+                <input type="checkbox" name="install_itsm" value="on" class="h-4 w-4" x-model="useItil">
+
+                <input type="hidden" name="install_audit_log" value="">
+                <input type="checkbox" name="install_audit_log" value="on" class="h-4 w-4" x-model="useAuditLog">
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Organization & Site</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Organization name</label>
+                    <input type="text" name="org_name" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="Acme Corp">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Site name</label>
+                    <input type="text" name="site_name" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="HQ">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Address</label>
+                    <input type="text" name="site_address" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="123 Main St">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">City</label>
+                    <input type="text" name="site_city" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="Austin">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Country</label>
+                    <input type="text" name="site_country" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="USA">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Building & Floor</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Building name</label>
+                    <input type="text" name="building_name" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="Building A">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Building address</label>
+                    <input type="text" name="building_address" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="123 Main St">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Floor number</label>
+                    <input type="text" name="floor_number" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="1">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6" x-show="useDataCenter" x-cloak>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Data Center Setup</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Room name</label>
+                    <input type="text" name="dc_room" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="DC-1">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Rack row name/number</label>
+                    <input type="text" name="rack_row" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="Row A">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Number of racks</label>
+                    <input type="number" name="rack_count" min="0" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="4">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6" x-show="useDns || useIpam || useDhcp" x-cloak>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">DNS & IPAM</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">First DNS zone</label>
+                    <input type="text" name="dns_zone" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="example.com" x-bind:disabled="!useDns">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">First IP range (CIDR)</label>
+                    <input type="text" name="ip_cidr" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="10.0.0.0/24" x-bind:disabled="!useIpam">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6" x-show="useDhcp" x-cloak>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">DHCP</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Scope name</label>
+                    <input type="text" name="dhcp_scope_name" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="Primary DHCP Scope">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Range start</label>
+                    <input type="text" name="dhcp_range_start" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="10.0.0.10">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Range end</label>
+                    <input type="text" name="dhcp_range_end" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="10.0.0.200">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Gateway</label>
+                    <input type="text" name="dhcp_gateway" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="10.0.0.1">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">DNS Server</label>
+                    <input type="text" name="dhcp_dns_server" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="10.0.0.53">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6" x-show="useVirtualization" x-cloak>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Virtualization</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Cluster name</label>
+                    <input type="text" name="virtual_cluster_name" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="Prod Cluster">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Number of hosts</label>
+                    <input type="number" name="virtual_host_count" min="0" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="3">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-4" x-show="useItil" x-cloak>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ITSM / ITIL</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+                We'll install the ITSM pack and dependencies.
+            </p>
+        </div>
+
+        <div class="flex justify-end">
+            <button type="submit" class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                Run Setup
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

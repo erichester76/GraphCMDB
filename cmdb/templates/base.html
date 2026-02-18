@@ -17,6 +17,10 @@
     <!-- Alpine.js (for dropdowns, modals, etc.) -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+
     {% block extra_head %}{% endblock %}
 
 </head>
@@ -52,19 +56,6 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
                     Dashboard
-                </a>
-
-                <a href="{% url 'cmdb:audit_log_list' %}"
-                   hx-get="{% url 'cmdb:audit_log_list' %}"
-                   hx-target="#main-content"
-                   hx-swap="innerHTML"
-                   hx-push-url="true"
-                   hx-indicator="#main-content .htmx-indicator"
-                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == "audit_log_list" %}bg-indigo-50 text-indigo-700 dark:bg-indigo-600 dark:text-white{% else %}text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700{% endif %}">
-                    <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Audit Log
                 </a>
 
                 <a href="{% url 'cmdb:feature_pack_list' %}"

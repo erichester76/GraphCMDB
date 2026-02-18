@@ -5,9 +5,10 @@
 {% block page_title %}{{ label }} :: {{ display_name }}{% endblock %}
 
 {% block header_actions %}
+    {% if node %}
     <div class="flex items-center gap-4">
         <button 
-            hx-get="{% url 'cmdb:node_edit' label node.element_id %}" 
+            hx-get="{% url 'cmdb:node_edit' label element_id %}" 
             hx-target="#edit-modal-content"
             hx-swap="innerHTML"
             data-modal-trigger="edit-modal"
@@ -15,7 +16,7 @@
             Edit
         </button>
         <button 
-            hx-post="{% url 'cmdb:node_delete' label node.element_id %}"  
+            hx-post="{% url 'cmdb:node_delete' label element_id %}"  
             hx-confirm="Delete this node? This action cannot be undone."
             hx-target="#main-content"
             hx-swap="innerHTML"
@@ -24,6 +25,7 @@
             Delete
         </button>
     </div>
+    {% endif %}
 {% endblock %}
 
 {% block content %}

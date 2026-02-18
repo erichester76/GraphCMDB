@@ -1,39 +1,41 @@
 # cmdb/views.py
-from django.shortcuts import render, redirect
-from .models import DynamicNode
-from .registry import TypeRegistry
-from django.http import HttpResponse, JsonResponse
-from django.template.loader import render_to_string
-from django.middleware.csrf import get_token
+import importlib
 import json
+import os
+import shutil
+
+import pandas as pd
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.http import HttpResponse, JsonResponse
+from django.middleware.csrf import get_token
+from django.shortcuts import render, redirect
+from django.template import Context, Template
+from django.core.paginator import Paginator
+from django.template.loader import render_to_string
 from django.views.decorators.http import require_http_methods
 from neomodel import db
-from django.template import Context, Template
-from django.conf import settings
-from django.contrib.auth.decorators import login_required
-import importlib
-import pandas as pd
 
-# Import permission utilities
+from .models import DynamicNode
+from .registry import TypeRegistry
+from cmdb.audit_hooks import emit_audit
+from cmdb.feature_pack_models import sync_feature_pack_to_db
+from cmdb.feature_pack_views import (
+    ensure_store_repo,
+    get_feature_pack_store_dir,
+    get_feature_packs_dir,
+    load_pack_config_from_path,
+    load_pack_types_from_path,
+    normalize_dependencies,
+    get_dependency_status,
+)
+from core.apps import reload_feature_packs
 from users.views import has_node_permission, node_permission_required
 
 # Constants for import functionality
 RELATIONSHIP_SUFFIX = '_names'
 CSV_ROW_OFFSET = 2  # Offset for error messages: 0-based index + header row
-
-# Import audit log utility if available
-try:
-    import sys
-    import os
-    # Add feature_packs to sys.path if not already there
-    feature_packs_path = os.path.join(settings.BASE_DIR, 'feature_packs')
-    if feature_packs_path not in sys.path:
-        sys.path.insert(0, feature_packs_path)
-    from audit_log_pack.views import create_audit_entry
-except ImportError:
-    # If audit log pack is not available, use a no-op function
-    def create_audit_entry(*args, **kwargs):
-        pass
 
 def parse_property_definition(prop_def):
     """
@@ -51,6 +53,277 @@ def parse_property_definition(prop_def):
             'choices': prop_def.get('choices', None)
         }
     raise TypeError(f"Property definition must be a string or dict, got {type(prop_def).__name__}")
+
+
+def is_staff_user(user):
+    return user.is_staff
+
+
+def install_feature_pack(pack_name: str) -> tuple[bool, str]:
+    store_dir = get_feature_pack_store_dir()
+    packs_dir = get_feature_packs_dir()
+    source_path = os.path.join(store_dir, pack_name)
+    dest_path = os.path.join(packs_dir, pack_name)
+
+    if os.path.exists(dest_path):
+        config_data = load_pack_config_from_path(dest_path, pack_name)
+        types_data = load_pack_types_from_path(dest_path)
+        sync_feature_pack_to_db(
+            pack_name=pack_name,
+            pack_path=dest_path,
+            config=config_data,
+            types_data=types_data,
+        )
+        reload_feature_packs()
+        return True, f'Feature pack "{pack_name}" already installed.'
+
+    if not os.path.exists(source_path):
+        store_ready, store_message = ensure_store_repo()
+        if not store_ready:
+            return False, store_message
+        if not os.path.exists(source_path):
+            return False, f'Feature pack "{pack_name}" not found in store.'
+
+    config_data = load_pack_config_from_path(source_path, pack_name)
+    dependencies = normalize_dependencies(config_data)
+    if dependencies:
+        dependency_status = get_dependency_status()
+        missing = [dep for dep in dependencies if dep not in dependency_status]
+        disabled = [dep for dep in dependencies if dep in dependency_status and not dependency_status[dep]]
+        if missing or disabled:
+            detail_parts = []
+            if missing:
+                detail_parts.append(f'missing: {", ".join(missing)}')
+            if disabled:
+                detail_parts.append(f'disabled: {", ".join(disabled)}')
+            details = "; ".join(detail_parts)
+            return False, f'Cannot install "{pack_name}" until dependencies are installed and enabled ({details}).'
+
+    try:
+        shutil.copytree(source_path, dest_path)
+        config_data = load_pack_config_from_path(dest_path, pack_name)
+        types_data = load_pack_types_from_path(dest_path)
+        sync_feature_pack_to_db(
+            pack_name=pack_name,
+            pack_path=dest_path,
+            config=config_data,
+            types_data=types_data,
+        )
+        reload_feature_packs()
+    except Exception as exc:
+        return False, f'Error adding feature pack "{pack_name}": {exc}'
+
+    return True, f'Feature pack "{pack_name}" installed.'
+
+
+def create_dynamic_node(label: str, properties: dict) -> DynamicNode:
+    node_class = DynamicNode.get_or_create_label(label)
+    return node_class(custom_properties=properties).save()
+
+
+@require_http_methods(["GET", "POST"])
+@login_required
+@user_passes_test(is_staff_user)
+def first_time_wizard(request):
+    labels = set(TypeRegistry.known_labels())
+
+    if request.method == "GET":
+        context = {
+            'has_org_pack': 'Organization' in labels,
+            'has_data_center_pack': 'Rack' in labels or 'Row' in labels,
+            'has_dns_pack': 'DNS_Zone' in labels,
+            'has_ipam_pack': 'Network' in labels,
+        }
+        return render(request, 'cmdb/first_time_wizard.html', context)
+
+    install_org = request.POST.get('install_org') == 'on'
+    install_data_center = request.POST.get('install_data_center') == 'on'
+    install_dns = request.POST.get('install_dns') == 'on'
+    install_ipam = request.POST.get('install_ipam') == 'on'
+    install_dhcp = request.POST.get('install_dhcp') == 'on'
+    install_virtualization = request.POST.get('install_virtualization') == 'on'
+    install_itsm = request.POST.get('install_itsm') == 'on'
+    install_audit_log = request.POST.get('install_audit_log') == 'on'
+
+    pack_order = []
+    if install_org:
+        pack_order.append('organization_pack')
+    if install_data_center:
+        pack_order.extend(['vendor_management_pack', 'inventory_pack', 'network_pack', 'data_center_pack'])
+    if install_dns:
+        pack_order.append('dns_pack')
+    if install_ipam or install_dhcp:
+        pack_order.append('ipam_pack')
+    if install_dhcp:
+        pack_order.append('dhcp_pack')
+    if install_virtualization:
+        pack_order.append('virtualization_pack')
+    if install_itsm:
+        pack_order.append('itsm_pack')
+    if install_audit_log:
+        pack_order.append('audit_log_pack')
+
+    seen = set()
+    pack_order = [pack for pack in pack_order if not (pack in seen or seen.add(pack))]
+
+    installed_messages = []
+    for pack_name in pack_order:
+        success, message = install_feature_pack(pack_name)
+        if success:
+            installed_messages.append(message)
+        else:
+            messages.error(request, message)
+
+    if installed_messages:
+        messages.success(request, " ".join(installed_messages))
+
+    labels = set(TypeRegistry.known_labels())
+
+    created_nodes = []
+    try:
+        org_name = request.POST.get('org_name', '').strip()
+        site_name = request.POST.get('site_name', '').strip()
+        site_address = request.POST.get('site_address', '').strip()
+        site_city = request.POST.get('site_city', '').strip()
+        site_country = request.POST.get('site_country', '').strip()
+
+        building_name = request.POST.get('building_name', '').strip()
+        building_address = request.POST.get('building_address', '').strip() or site_address
+        floor_number = request.POST.get('floor_number', '').strip()
+
+        data_center_room = request.POST.get('dc_room', '').strip()
+        rack_row_name = request.POST.get('rack_row', '').strip()
+        rack_count = request.POST.get('rack_count', '').strip()
+
+        dns_zone = request.POST.get('dns_zone', '').strip()
+        ip_cidr = request.POST.get('ip_cidr', '').strip()
+        dhcp_scope_name = request.POST.get('dhcp_scope_name', '').strip()
+        dhcp_range_start = request.POST.get('dhcp_range_start', '').strip()
+        dhcp_range_end = request.POST.get('dhcp_range_end', '').strip()
+        dhcp_gateway = request.POST.get('dhcp_gateway', '').strip()
+        dhcp_dns_server = request.POST.get('dhcp_dns_server', '').strip()
+
+        virtual_cluster_name = request.POST.get('virtual_cluster_name', '').strip()
+        virtual_host_count = request.POST.get('virtual_host_count', '').strip()
+
+        org_node = None
+        site_node = None
+        building_node = None
+        floor_node = None
+        room_node = None
+        row_node = None
+
+        if org_name and 'Organization' in labels:
+            org_node = create_dynamic_node('Organization', {'name': org_name})
+            created_nodes.append('Organization')
+
+        if site_name and 'Site' in labels:
+            site_props = {
+                'name': site_name,
+                'address': site_address,
+                'city': site_city,
+                'country': site_country,
+            }
+            site_node = create_dynamic_node('Site', site_props)
+            created_nodes.append('Site')
+
+        if org_node and site_node:
+            DynamicNode.connect_nodes(org_node.element_id, 'Organization', 'LOCATED_AT', site_node.element_id, 'Site')
+
+        if building_name and 'Building' in labels:
+            building_props = {
+                'name': building_name,
+                'address': building_address,
+            }
+            building_node = create_dynamic_node('Building', building_props)
+            created_nodes.append('Building')
+
+        if building_node and site_node:
+            DynamicNode.connect_nodes(building_node.element_id, 'Building', 'LOCATED_IN', site_node.element_id, 'Site')
+
+        if floor_number and 'Floor' in labels:
+            floor_node = create_dynamic_node('Floor', {'floor_number': floor_number})
+            created_nodes.append('Floor')
+
+        if floor_node and building_node:
+            DynamicNode.connect_nodes(floor_node.element_id, 'Floor', 'LOCATED_IN', building_node.element_id, 'Building')
+
+        if data_center_room and 'Room' in labels:
+            room_node = create_dynamic_node('Room', {'name': data_center_room, 'orientation': 'front'})
+            created_nodes.append('Room')
+
+        if room_node and floor_node:
+            DynamicNode.connect_nodes(room_node.element_id, 'Room', 'LOCATED_IN', floor_node.element_id, 'Floor')
+
+        if rack_row_name and 'Row' in labels:
+            row_node = create_dynamic_node('Row', {
+                'name': rack_row_name,
+                'orientation': 'front',
+                'row_number': rack_row_name,
+            })
+            created_nodes.append('Row')
+
+        if row_node and room_node:
+            DynamicNode.connect_nodes(row_node.element_id, 'Row', 'LOCATED_IN', room_node.element_id, 'Room')
+
+        if rack_count.isdigit() and int(rack_count) > 0 and 'Rack' in labels:
+            for rack_index in range(1, int(rack_count) + 1):
+                rack_props = {
+                    'name': f"Rack {rack_index}",
+                    'height': 42,
+                    'rack_number': rack_index,
+                }
+                rack_node = create_dynamic_node('Rack', rack_props)
+                created_nodes.append('Rack')
+                if row_node:
+                    DynamicNode.connect_nodes(rack_node.element_id, 'Rack', 'LOCATED_IN', row_node.element_id, 'Row')
+
+        if dns_zone and 'DNS_Zone' in labels:
+            create_dynamic_node('DNS_Zone', {'name': dns_zone})
+            created_nodes.append('DNS_Zone')
+
+        network_node = None
+        if ip_cidr and 'Network' in labels:
+            network_node = create_dynamic_node('Network', {'name': ip_cidr, 'cidr': ip_cidr})
+            created_nodes.append('Network')
+
+        if dhcp_scope_name and dhcp_range_start and dhcp_range_end and 'DHCP_Scope' in labels:
+            dhcp_props = {
+                'name': dhcp_scope_name,
+                'range_start': dhcp_range_start,
+                'range_end': dhcp_range_end,
+            }
+            if dhcp_gateway:
+                dhcp_props['gateway'] = dhcp_gateway
+            if dhcp_dns_server:
+                dhcp_props['dns_server'] = dhcp_dns_server
+            dhcp_node = create_dynamic_node('DHCP_Scope', dhcp_props)
+            created_nodes.append('DHCP_Scope')
+            if network_node:
+                DynamicNode.connect_nodes(dhcp_node.element_id, 'DHCP_Scope', 'PART_OF', network_node.element_id, 'Network')
+
+        cluster_node = None
+        if virtual_cluster_name and 'Virtual_Cluster' in labels:
+            cluster_node = create_dynamic_node('Virtual_Cluster', {'name': virtual_cluster_name})
+            created_nodes.append('Virtual_Cluster')
+
+        if virtual_host_count.isdigit() and int(virtual_host_count) > 0 and 'Virtual_Host' in labels:
+            for host_index in range(1, int(virtual_host_count) + 1):
+                host_props = {'name': f"Host {host_index}"}
+                host_node = create_dynamic_node('Virtual_Host', host_props)
+                created_nodes.append('Virtual_Host')
+                if cluster_node:
+                    DynamicNode.connect_nodes(host_node.element_id, 'Virtual_Host', 'PART_OF', cluster_node.element_id, 'Virtual_Cluster')
+
+
+        if created_nodes:
+            messages.success(request, f"Created: {', '.join(sorted(set(created_nodes)))}")
+        else:
+            messages.info(request, 'No initial objects were created. Adjust selections and try again.')
+    except Exception as exc:
+        messages.error(request, f'Wizard setup failed: {exc}')
+
+    return redirect('cmdb:first_time_wizard')
 
 def get_feature_pack_modal_override(label, modal_type):
     for modal in getattr(settings, 'FEATURE_PACK_MODALS', []):
@@ -248,10 +521,21 @@ def nodes_list(request, label):
     """
     try:
         node_class = DynamicNode.get_or_create_label(label)
-        nodes = node_class.nodes.all()[:50]  # limit for MVP
+        nodes_queryset = node_class.nodes.all()
     except Exception as e:
         print(f"Error fetching {label}: {e}")
-        nodes = []
+        nodes_queryset = []
+
+    page_number = request.GET.get('page', 1)
+    try:
+        page_size = int(request.GET.get('per_page', 50))
+    except (TypeError, ValueError):
+        page_size = 50
+    page_size = max(1, min(page_size, 200))
+
+    paginator = Paginator(list(nodes_queryset), page_size)
+    page_obj = paginator.get_page(page_number)
+    nodes = page_obj.object_list
     
     # Get column configuration from type registry
     metadata = TypeRegistry.get_metadata(label)
@@ -314,6 +598,9 @@ def nodes_list(request, label):
         'all_properties': all_properties_with_rels,
         'all_properties_json': json.dumps(all_properties_with_rels),
         'all_labels': TypeRegistry.known_labels(),
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'page_size': page_size,
     }
 
     # If request is from HTMX, return content + header for OOB swap
@@ -552,13 +839,23 @@ def node_edit(request, label, element_id):
         # Create audit log entry
         node_name = current.get('name', '')
         changed_keys = [k for k in new_props.keys() if old_props.get(k) != new_props.get(k)]
-        create_audit_entry(
+        changes_detail = {
+            key: {
+                'old': old_props.get(key),
+                'new': current.get(key)
+            }
+            for key in set(old_props.keys()) | set(current.keys())
+            if old_props.get(key) != current.get(key)
+        }
+        emit_audit(
             action='update',
             node_label=label,
             node_id=element_id,
             node_name=node_name,
             user=request.user.username if request.user.is_authenticated else 'System',
-            changes=f"Updated properties: {', '.join(changed_keys)}" if changed_keys else "Properties updated"
+            changes=json.dumps(changes_detail, sort_keys=True, indent=2) if changes_detail else "Properties updated",
+            old_props=old_props,
+            new_props=current
         )
 
         return render(request, 'cmdb/partials/edit_success.html', {
@@ -592,7 +889,7 @@ def node_delete(request, label, element_id):
         node_name = (node.custom_properties or {}).get('name', '')
         
         # Create audit log entry before deletion
-        create_audit_entry(
+        emit_audit(
             action='delete',
             node_label=label,
             node_id=element_id,
@@ -788,7 +1085,7 @@ def node_create(request, label):
 
             # Create audit log entry
             node_name = new_props.get('name', '')
-            create_audit_entry(
+            emit_audit(
                 action='create',
                 node_label=label,
                 node_id=node.element_id,
@@ -841,7 +1138,7 @@ def node_connect(request, label, element_id):
         
         # Create audit log entry
         node_name = (node.custom_properties or {}).get('name', '')
-        create_audit_entry(
+        emit_audit(
             action='connect',
             node_label=label,
             node_id=element_id,
@@ -897,7 +1194,7 @@ def node_disconnect(request, label, element_id):
         
         # Create audit log entry
         node_name = (node.custom_properties or {}).get('name', '')
-        create_audit_entry(
+        emit_audit(
             action='disconnect',
             node_label=label,
             node_id=element_id,
@@ -974,54 +1271,6 @@ def get_target_nodes(request):
         return HttpResponse(f'<option disabled>Error loading nodes for {target_label}: {str(e)}</option>')
 
 
-@require_http_methods(["GET"])
-def audit_log_list(request):
-    """
-    Global audit log view showing all audit log entries across all nodes.
-    Supports HTMX partial updates
-    """
-    try:
-        # Fetch all audit log entries
-        audit_node_class = DynamicNode.get_or_create_label('AuditLogEntry')
-        audit_nodes = audit_node_class.nodes.all()[:200]  # Limit to latest 200 entries
-        
-        # Extract and sort by timestamp
-        audit_entries = []
-        for node in audit_nodes:
-            props = node.custom_properties or {}
-            audit_entries.append({
-                'element_id': node.element_id,
-                'timestamp': props.get('timestamp', ''),
-                'action': props.get('action', ''),
-                'node_label': props.get('node_label', ''),
-                'node_id': props.get('node_id', ''),
-                'node_name': props.get('node_name', 'Unknown'),
-                'user': props.get('user', 'System'),
-                'changes': props.get('changes', ''),
-                'relationship_type': props.get('relationship_type', ''),
-                'target_label': props.get('target_label', ''),
-                'target_id': props.get('target_id', '')
-            })
-        
-        # Sort by timestamp descending (most recent first)
-        audit_entries.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-    except Exception as e:
-        print(f"Error fetching audit log: {e}")
-        audit_entries = []
-    
-    context = {
-        'audit_entries': audit_entries,
-        'all_labels': TypeRegistry.known_labels(),
-    }
-    
-    # If HTMX request, return content + header for OOB swap
-    if request.htmx:
-        content_html = render_to_string('cmdb/partials/audit_log_content.html', context, request=request)
-        header_html = render_to_string('cmdb/partials/audit_log_header.html', context, request=request)
-        return HttpResponse(content_html + header_html)
-    
-    return render(request, 'cmdb/audit_log_list.html', context)
 
 @require_http_methods(["GET", "POST"])
 @login_required
@@ -1150,7 +1399,7 @@ def node_import(request, label):
                 
                 # Create audit log entry
                 node_name = node_props.get('name', '')
-                create_audit_entry(
+                emit_audit(
                     action='create',
                     node_label=label,
                     node_id=node.element_id,

@@ -8,6 +8,7 @@ import os
 import importlib.util
 import json
 from cmdb.registry import TypeRegistry
+from cmdb.audit_hooks import register_audit_hook
 from django.urls import path, include
 import sys
 
@@ -18,6 +19,7 @@ def reload_feature_packs():
     TypeRegistry.clear()
     settings.FEATURE_PACK_TABS = []
     settings.FEATURE_PACK_MODALS = []
+    settings.FEATURE_PACK_URLS = []
 
     existing_dirs = settings.TEMPLATES[0]['DIRS']
     settings.TEMPLATES[0]['DIRS'] = [
@@ -113,6 +115,20 @@ class CoreConfig(AppConfig):
                     spec.loader.exec_module(config_module)
                     config_data = config_module.FEATURE_PACK_CONFIG
 
+                # Register hooks if declared in config
+                try:
+                    hooks_config = config_data.get('hooks', {}) if config_data else {}
+                    audit_hook_path = hooks_config.get('audit')
+                    if audit_hook_path:
+                        module_path, func_name = audit_hook_path.rsplit('.', 1)
+                        hooks_module = importlib.import_module(module_path)
+                        register_hooks = getattr(hooks_module, func_name, None)
+                        if callable(register_hooks):
+                            register_hooks(register_audit_hook)
+                            print(f"[DEBUG] Registered audit hooks for {pack_name}")
+                except Exception as e:
+                    print(f"[DEBUG] Could not register hooks for {pack_name}: {e}")
+
                 # Sync to GraphDB if needed
                 if needs_sync:
                     try:
@@ -172,5 +188,30 @@ class CoreConfig(AppConfig):
                         modal['original_for_labels'] = modal.get('for_labels', [])
                         settings.FEATURE_PACK_MODALS.append(modal)
                         print(f"[DEBUG] Added modal override: {modal.get('type', 'unknown')}")
+
+                # Register URLs
+                if config_data and 'urls' in config_data:
+                    if not hasattr(settings, 'FEATURE_PACK_URLS'):
+                        settings.FEATURE_PACK_URLS = []
+                    urls_config = config_data.get('urls')
+                    if isinstance(urls_config, dict):
+                        urls_config = [urls_config]
+                    if isinstance(urls_config, list):
+                        for entry in urls_config:
+                            if isinstance(entry, str):
+                                settings.FEATURE_PACK_URLS.append({'prefix': '', 'module': entry})
+                            elif isinstance(entry, dict):
+                                module = entry.get('module')
+                                if module:
+                                    settings.FEATURE_PACK_URLS.append({
+                                        'prefix': entry.get('prefix', ''),
+                                        'module': module
+                                    })
         
         print(f"[DEBUG] Feature pack loading complete")
+
+        try:
+            from cmdb.feature_pack_urls import refresh_feature_pack_urls
+            refresh_feature_pack_urls()
+        except Exception as e:
+            print(f"[DEBUG] Could not refresh feature pack URLs: {e}")

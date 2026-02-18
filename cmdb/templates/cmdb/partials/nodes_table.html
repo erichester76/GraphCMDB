@@ -85,6 +85,41 @@
     </tbody>
 </table>
 
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<div class="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    <div class="text-sm text-gray-600 dark:text-gray-400">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </div>
+    <div class="flex items-center gap-2">
+        {% if page_obj.has_previous %}
+            <a href="{% url 'cmdb:nodes_list' label %}?page={{ page_obj.previous_page_number }}&per_page={{ page_size }}"
+               hx-get="{% url 'cmdb:nodes_list' label %}?page={{ page_obj.previous_page_number }}&per_page={{ page_size }}"
+               hx-target="#nodes-content"
+               hx-swap="innerHTML"
+               hx-push-url="true"
+               class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                Previous
+            </a>
+        {% else %}
+            <span class="px-3 py-1 rounded border border-gray-200 dark:border-gray-700 text-sm text-gray-400 dark:text-gray-500">Previous</span>
+        {% endif %}
+
+        {% if page_obj.has_next %}
+            <a href="{% url 'cmdb:nodes_list' label %}?page={{ page_obj.next_page_number }}&per_page={{ page_size }}"
+               hx-get="{% url 'cmdb:nodes_list' label %}?page={{ page_obj.next_page_number }}&per_page={{ page_size }}"
+               hx-target="#nodes-content"
+               hx-swap="innerHTML"
+               hx-push-url="true"
+               class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                Next
+            </a>
+        {% else %}
+            <span class="px-3 py-1 rounded border border-gray-200 dark:border-gray-700 text-sm text-gray-400 dark:text-gray-500">Next</span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <!-- Edit Modal (placeholder - filled by HTMX) -->
 <dialog id="edit-modal" 
     class="p-6 rounded-lg shadow-xl max-w-lg w-full backdrop:bg-black backdrop:bg-opacity-50 bg-white dark:bg-gray-800 dark:text-white">

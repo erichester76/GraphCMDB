@@ -1,5 +1,5 @@
 # cmdb/urls.py
-from django.urls import path
+from django.urls import path, include
 from . import views
 from . import feature_pack_views
 
@@ -10,7 +10,7 @@ urlpatterns = [
     
     path('', views.dashboard, name='dashboard'),
     
-    path('audit-log/', views.audit_log_list, name='audit_log_list'),
+    path('', include('cmdb.feature_pack_urls')),
     
     path('targets/', views.get_target_nodes, name='get_target_nodes'),
     
@@ -23,6 +23,8 @@ urlpatterns = [
     path('feature-packs/<str:pack_name>/enable/', feature_pack_views.feature_pack_enable, name='feature_pack_enable'),
     path('feature-packs/<str:pack_name>/disable/', feature_pack_views.feature_pack_disable, name='feature_pack_disable'),
     path('feature-packs/<str:pack_name>/delete/', feature_pack_views.feature_pack_delete, name='feature_pack_delete'),
+
+    path('setup/', views.first_time_wizard, name='first_time_wizard'),
 
     path('<str:label>/', views.nodes_list, name='nodes_list'),
     path('<str:label>/create/', views.node_create, name='node_create'),

@@ -5,6 +5,12 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
+<div class="flex justify-end mb-4">
+    <a href="{% url 'cmdb:first_time_wizard' %}"
+       class="inline-flex items-center px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+        Setup Wizard
+    </a>
+</div>
 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
     {% for label, count in counts.items %}
     <a href="{% url 'cmdb:nodes_list' label %}"
