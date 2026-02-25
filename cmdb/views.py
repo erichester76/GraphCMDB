@@ -438,11 +438,18 @@ def nodes_list(request, label):
         nodes_queryset = []
 
     page_number = request.GET.get('page', 1)
-    try:
-        page_size = int(request.GET.get('per_page', 50))
-    except (TypeError, ValueError):
-        page_size = 50
-    page_size = max(1, min(page_size, 200))
+
+    # Persist per_page in session
+    if 'per_page' in request.GET:
+        try:
+            page_size = int(request.GET['per_page'])
+        except (TypeError, ValueError):
+            page_size = request.session.get('per_page', 50)
+        page_size = max(1, min(page_size, 200))
+        request.session['per_page'] = page_size
+    else:
+        page_size = request.session.get('per_page', 50)
+        page_size = max(1, min(page_size, 200))
 
     paginator = Paginator(list(nodes_queryset), page_size)
     page_obj = paginator.get_page(page_number)
