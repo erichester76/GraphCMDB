@@ -1,3 +1,42 @@
+from django.urls import path
+from django.shortcuts import render, redirect
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required, user_passes_test
+
+def is_staff_user(user):
+    return user.is_staff
+
+@login_required
+@user_passes_test(is_staff_user)
+def feature_pack_store_detail(request, pack_name):
+    """
+    Show detailed information about a feature pack from the store (not installed).
+    """
+    store_dir = get_feature_pack_store_dir()
+    pack_path = os.path.join(store_dir, pack_name)
+    config = load_pack_config_from_path(pack_path, pack_name)
+    types_data = load_pack_types_from_path(pack_path)
+    type_info = []
+    for label, metadata in (types_data or {}).items():
+        type_info.append({
+            'label': label,
+            'enabled': False,
+            'metadata': metadata,
+        })
+    context = {
+        'pack': {
+            'name': pack_name,
+            'display_name': config.get('name', pack_name),
+            'enabled': False,
+            'path': pack_path,
+            'last_modified': None,
+            'last_synced': None,
+            'config': config,
+            'types': type_info,
+        }
+    }
+    return render(request, 'feature_packs/store_detail.html', context)
 # cmdb/feature_pack_views.py
 """
 Views for managing feature packs - enabling/disabling and viewing status.
@@ -171,10 +210,19 @@ def feature_pack_list(request):
             )
         
         pack_info = []
+        store_versions = {}
+        for store_pack_name in store_packs:
+            store_pack_path = os.path.join(store_dir, store_pack_name)
+            store_config = load_pack_config_from_path(store_pack_path, store_pack_name)
+            store_versions[store_pack_name] = store_config.get('version', '0.0.0')
+
         for pack in packs:
-            # Get types for this pack from TypeRegistry
             types = TypeRegistry.get_types_for_pack(pack.name)
-            
+            installed_version = getattr(pack, 'version', '0.0.0')
+            store_version = store_versions.get(pack.name, '0.0.0')
+            def parse_version(v):
+                return tuple(int(x) for x in v.split('.'))
+            upgrade_available = parse_version(store_version) > parse_version(installed_version)
             pack_info.append({
                 'name': pack.name,
                 'display_name': pack.display_name,
@@ -185,8 +233,11 @@ def feature_pack_list(request):
                 'type_count': len(types),
                 'types': types,
                 'config': get_pack_config(pack),
+                'installed_version': installed_version,
+                'store_version': store_version,
+                'upgrade_available': upgrade_available,
             })
-        
+
         installed_names = {pack['name'] for pack in pack_info}
         available_store_packs = store_packs
 
@@ -198,6 +249,7 @@ def feature_pack_list(request):
             'store_packs': store_packs,
             'available_store_packs': available_store_packs,
             'installed_store_packs': installed_names,
+            'store_versions': store_versions,
         }
         
         return render(request, 'feature_packs/list.html', context)
@@ -253,9 +305,28 @@ def feature_pack_disable(request, pack_name):
                 'success': False,
                 'error': f'Feature pack "{pack_name}" not found'
             }, status=404)
-        
+
+        # Check for installed packs that depend on this pack
+        installed_packs = FeaturePackNode.get_all_packs()
+        dependents = []
+        for other_pack in installed_packs:
+            config = other_pack.config or {}
+            dependencies = config.get('dependencies', [])
+            if isinstance(dependencies, str):
+                dependencies = [dependencies]
+            if pack_name in dependencies and other_pack.enabled:
+                dependents.append(other_pack.display_name or other_pack.name)
+
+        if dependents:
+            return JsonResponse({
+                'success': False,
+                'error': f'Cannot disable "{pack_name}" because these enabled packs depend on it: {", ".join(dependents)}',
+                'pack_name': pack_name,
+                'enabled': True,
+            }, status=400)
+
         pack.disable()
-        
+
         return JsonResponse({
             'success': True,
             'message': f'Feature pack "{pack.display_name}" disabled successfully',
@@ -289,8 +360,37 @@ def feature_pack_add(request):
         return redirect('cmdb:feature_pack_list')
 
     if os.path.exists(dest_path):
-        messages.warning(request, f'Feature pack "{pack_name}" is already installed.')
-        return redirect('cmdb:feature_pack_list')
+        # Check version for upgrade
+        installed_config = load_pack_config_from_path(dest_path, pack_name)
+        store_config = load_pack_config_from_path(source_path, pack_name)
+        installed_version = installed_config.get('version', '0.0.0')
+        store_version = store_config.get('version', '0.0.0')
+        def parse_version(v):
+            return tuple(int(x) for x in v.split('.'))
+        if parse_version(store_version) > parse_version(installed_version):
+            try:
+                shutil.rmtree(dest_path)
+                shutil.copytree(source_path, dest_path)
+                config_data = load_pack_config_from_path(dest_path, pack_name)
+                types_data = load_pack_types_from_path(dest_path)
+                from cmdb.feature_pack_models import sync_feature_pack_to_db
+                sync_feature_pack_to_db(
+                    pack_name=pack_name,
+                    pack_path=dest_path,
+                    config=config_data,
+                    types_data=types_data,
+                )
+                reload_feature_packs()
+                messages.success(
+                    request,
+                    f'Feature pack "{pack_name}" upgraded to version {store_version}.'
+                )
+            except Exception as exc:
+                messages.error(request, f'Error upgrading feature pack: {exc}')
+            return redirect('cmdb:feature_pack_list')
+        else:
+            messages.warning(request, f'Feature pack "{pack_name}" is already installed and up to date.')
+            return redirect('cmdb:feature_pack_list')
 
     config_data = load_pack_config_from_path(source_path, pack_name)
     dependencies = normalize_dependencies(config_data)
@@ -354,6 +454,22 @@ def feature_pack_delete(request, pack_name):
 
     if not os.path.exists(pack_path):
         messages.error(request, f'Feature pack "{pack_name}" not found.')
+        return redirect('cmdb:feature_pack_list')
+
+    # Check for installed packs that depend on this pack
+    from cmdb.feature_pack_models import FeaturePackNode
+    installed_packs = FeaturePackNode.get_all_packs()
+    dependents = []
+    for pack in installed_packs:
+        config = pack.config or {}
+        dependencies = config.get('dependencies', [])
+        if isinstance(dependencies, str):
+            dependencies = [dependencies]
+        if pack_name in dependencies:
+            dependents.append(pack.display_name or pack.name)
+
+    if dependents:
+        messages.error(request, f'Cannot delete "{pack_name}" because these installed packs depend on it: {", ".join(dependents)}')
         return redirect('cmdb:feature_pack_list')
 
     try:

@@ -33,6 +33,7 @@ class FeaturePackNode(StructuredNode):
     last_synced = DateTimeProperty(default_now=True)
     config = JSONProperty(default=dict)
     types = JSONProperty(default=list)  # List of type labels from types.json
+    version = StringProperty(default="0.0.0")
     
     @classmethod
     def get_or_create_pack(cls, name: str, **kwargs) -> 'FeaturePackNode':
@@ -109,13 +110,18 @@ def sync_feature_pack_to_db(pack_name: str, pack_path: str,
     # Get or create feature pack node
     display_name = config.get('name', pack_name) if config else pack_name
     
+    version = config.get('version', '0.0.0') if config else '0.0.0'
+    # Ensure config dict has version field
+    config_to_store = dict(config or {})
+    config_to_store['version'] = version
     pack_node = FeaturePackNode.get_or_create_pack(
         name=pack_name,
         display_name=display_name,
         path=pack_path,
         last_modified=last_modified,
-        config=config or {},
-        types=list(types_data.keys()) if types_data else []
+        config=config_to_store,
+        types=list(types_data.keys()) if types_data else [],
+        version=version
     )
     
     return pack_node

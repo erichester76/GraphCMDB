@@ -99,12 +99,18 @@
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <form method="post" action="{% url 'cmdb:feature_pack_add' %}" class="flex flex-col gap-3 sm:flex-row sm:items-center">
                     {% csrf_token %}
-                    <select name="pack_name" class="w-full sm:w-96 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <select name="pack_name" id="store-pack-select" class="w-full sm:w-96 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                         {% if available_store_packs %}
                             <option value="" selected disabled>Select a feature pack</option>
                             {% for pack_name in available_store_packs %}
                             <option value="{{ pack_name }}">
-                                {{ pack_name }}{% if pack_name in installed_store_packs %} (installed){% endif %}
+                                {{ pack_name }}
+                                {% for pack in packs %}
+                                    {% if pack.name == pack_name %}
+                                        (v{{ pack.store_version }})
+                                        {% if pack.upgrade_available %} (upgrade available){% elif pack_name in installed_store_packs %} (installed){% endif %}
+                                    {% endif %}
+                                {% endfor %}
                             </option>
                             {% endfor %}
                         {% else %}
@@ -116,7 +122,31 @@
                             {% if not available_store_packs %}disabled{% endif %}>
                         Install Pack
                     </button>
+                    <form method="get" action="" id="store-pack-details-form" style="display:inline">
+                        <input type="hidden" name="pack_name" id="store-pack-details-name" value="">
+                        <button type="submit"
+                                class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                                id="store-pack-details-btn">
+                            Pack Details
+                        </button>
+                    </form>
                 </form>
+                <script>
+                // Update details form action and value when pulldown changes
+                document.addEventListener('DOMContentLoaded', function() {
+                    var select = document.getElementById('store-pack-select');
+                    var detailsForm = document.getElementById('store-pack-details-form');
+                    var detailsName = document.getElementById('store-pack-details-name');
+                    var detailsBtn = document.getElementById('store-pack-details-btn');
+                    select.addEventListener('change', function() {
+                        var packName = select.value;
+                        detailsName.value = packName;
+                        detailsForm.action = '/cmdb/feature-packs/store/' + packName + '/';
+                        detailsBtn.disabled = !packName;
+                    });
+                    detailsBtn.disabled = true;
+                });
+                </script>
                 <form method="post" action="{% url 'cmdb:feature_pack_refresh_store' %}">
                     {% csrf_token %}
                     <button type="submit"
@@ -144,7 +174,17 @@
                             <h4 class="text-lg font-medium text-gray-900 dark:text-white truncate">
                                 {{ pack.display_name }}
                             </h4>
-                            {% if pack.enabled %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                                v{{ pack.installed_version }}
+                            </span>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                                Store: v{{ pack.store_version }}
+                            </span>
+                            {% if pack.upgrade_available %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                Upgrade Available
+                            </span>
+                            {% elif pack.enabled %}
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                                 Enabled
                             </span>
@@ -187,6 +227,16 @@
                             </button>
                         </form>
                         
+                        {% if pack.upgrade_available %}
+                        <form method="post" action="{% url 'cmdb:feature_pack_add' %}" style="display:inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="pack_name" value="{{ pack.name }}">
+                            <button type="submit"
+                                    class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                Upgrade
+                            </button>
+                        </form>
+                        {% endif %}
                         {% if pack.enabled %}
                         <button 
                             onclick="togglePack('{{ pack.name }}', false)"

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Feature Pack Store Details: {{ pack.display_name }}</h2>
+  <div class="card mb-3">
+    <div class="card-body">
+      <h5 class="card-title">Pack Name: {{ pack.name }}</h5>
+      <p class="card-text">Version: {{ pack.config.version }}</p>
+      <p class="card-text">Description: {{ pack.config.description }}</p>
+      <p class="card-text">Path: {{ pack.path }}</p>
+      <p class="card-text">Types:</p>
+      <ul>
+        {% for type in pack.types %}
+          <li>{{ type.label }} - {{ type.metadata.description }}</li>
+        {% endfor %}
+      </ul>
+      <button class="btn btn-primary" onclick="window.location.href='/feature-packs/install/{{ pack.name }}'">Install Pack</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

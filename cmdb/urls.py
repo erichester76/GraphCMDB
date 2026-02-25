@@ -20,6 +20,7 @@ urlpatterns = [
     path('feature-packs/add/', feature_pack_views.feature_pack_add, name='feature_pack_add'),
     path('feature-packs/refresh-store/', feature_pack_views.feature_pack_refresh_store, name='feature_pack_refresh_store'),
     path('feature-packs/<str:pack_name>/', feature_pack_views.feature_pack_detail, name='feature_pack_detail'),
+    path('feature-packs/store/<str:pack_name>/', feature_pack_views.feature_pack_store_detail, name='feature_pack_store_detail'),
     path('feature-packs/<str:pack_name>/enable/', feature_pack_views.feature_pack_enable, name='feature_pack_enable'),
     path('feature-packs/<str:pack_name>/disable/', feature_pack_views.feature_pack_disable, name='feature_pack_disable'),
     path('feature-packs/<str:pack_name>/delete/', feature_pack_views.feature_pack_delete, name='feature_pack_delete'),
