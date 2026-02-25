@@ -411,6 +411,25 @@ def feature_pack_add(request):
             )
             return redirect('cmdb:feature_pack_list')
 
+    config_data = load_pack_config_from_path(source_path, pack_name)
+    dependencies = normalize_dependencies(config_data)
+    if dependencies:
+        dependency_status = get_dependency_status()
+        missing = [dep for dep in dependencies if dep not in dependency_status]
+        disabled = [dep for dep in dependencies if dep in dependency_status and not dependency_status[dep]]
+        if missing or disabled:
+            detail_parts = []
+            if missing:
+                detail_parts.append(f'missing: {", ".join(missing)}')
+            if disabled:
+                detail_parts.append(f'disabled: {", ".join(disabled)}')
+            details = "; ".join(detail_parts)
+            messages.error(
+                request,
+                f'Cannot install "{pack_name}" until dependencies are installed and enabled ({details}).'
+            )
+            return redirect('cmdb:feature_pack_list')
+
     try:
         shutil.copytree(source_path, dest_path)
         config_data = load_pack_config_from_path(dest_path, pack_name)
