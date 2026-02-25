@@ -97,42 +97,44 @@
         </div>
         <div class="px-4 py-5 sm:px-6">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <form method="post" action="{% url 'cmdb:feature_pack_add' %}" class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    {% csrf_token %}
-                    <select name="pack_name" id="store-pack-select" class="w-full sm:w-96 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                        {% if available_store_packs %}
-                            <option value="" selected disabled>Select a feature pack</option>
-                            {% for pack_name in available_store_packs %}
-                            <option value="{{ pack_name }}">
-                                {{ pack_name }}
-                                {% for pack in packs %}
-                                    {% if pack.name == pack_name %}
-                                        (v{{ pack.store_version }})
-                                        {% if pack.upgrade_available %} (upgrade available){% elif pack_name in installed_store_packs %} (installed){% endif %}
-                                    {% endif %}
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center" id="store-pack-form-group">
+                    <form method="post" action="{% url 'cmdb:feature_pack_add' %}" class="flex flex-row gap-3 sm:items-center">
+                        {% csrf_token %}
+                        <select name="pack_name" id="store-pack-select" class="w-full sm:w-96 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                            {% if available_store_packs %}
+                                <option value="" selected disabled>Select a feature pack</option>
+                                {% for pack_name in available_store_packs %}
+                                <option value="{{ pack_name }}">
+                                    {{ pack_name }}
+                                    {% for pack in packs %}
+                                        {% if pack.name == pack_name %}
+                                            (v{{ pack.store_version }})
+                                            {% if pack.upgrade_available %} (upgrade available){% elif pack_name in installed_store_packs %} (installed){% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </option>
                                 {% endfor %}
-                            </option>
-                            {% endfor %}
-                        {% else %}
-                            <option value="" selected disabled>No packs available to install</option>
-                        {% endif %}
-                    </select>
-                    <button type="submit"
-                            class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
-                            {% if not available_store_packs %}disabled{% endif %}>
-                        Install Pack
-                    </button>
+                            {% else %}
+                                <option value="" selected disabled>No packs available to install</option>
+                            {% endif %}
+                        </select>
+                        <button type="submit"
+                                class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
+                                {% if not available_store_packs %}disabled{% endif %}>
+                            Install Pack
+                        </button>
+                    </form>
                     <form method="get" action="" id="store-pack-details-form" style="display:inline">
                         <input type="hidden" name="pack_name" id="store-pack-details-name" value="">
                         <button type="submit"
                                 class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                                id="store-pack-details-btn">
+                                id="store-pack-details-btn" disabled>
                             Pack Details
                         </button>
                     </form>
-                </form>
+                </div>
                 <script>
-                // Update details form action and value when pulldown changes
+                // Ensure Pack Details button is enabled/disabled correctly on select change
                 document.addEventListener('DOMContentLoaded', function() {
                     var select = document.getElementById('store-pack-select');
                     var detailsForm = document.getElementById('store-pack-details-form');
@@ -141,10 +143,24 @@
                     select.addEventListener('change', function() {
                         var packName = select.value;
                         detailsName.value = packName;
-                        detailsForm.action = '/cmdb/feature-packs/store/' + packName + '/';
-                        detailsBtn.disabled = !packName;
+                        if (packName && packName !== "") {
+                            detailsForm.action = '/cmdb/feature-packs/store/' + encodeURIComponent(packName) + '/';
+                            detailsBtn.removeAttribute('disabled');
+                        } else {
+                            detailsForm.action = '';
+                            detailsBtn.setAttribute('disabled', 'disabled');
+                        }
                     });
-                    detailsBtn.disabled = true;
+                    // Initialize state on page load
+                    var initialPackName = select.value;
+                    detailsName.value = initialPackName;
+                    if (initialPackName && initialPackName !== "") {
+                        detailsForm.action = '/cmdb/feature-packs/store/' + encodeURIComponent(initialPackName) + '/';
+                        detailsBtn.removeAttribute('disabled');
+                    } else {
+                        detailsForm.action = '';
+                        detailsBtn.setAttribute('disabled', 'disabled');
+                    }
                 });
                 </script>
                 <form method="post" action="{% url 'cmdb:feature_pack_refresh_store' %}">

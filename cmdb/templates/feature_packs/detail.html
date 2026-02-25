@@ -47,10 +47,15 @@
         <div class="px-6 py-5">
             <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                 <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Version</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ pack.config.version|default:'N/A' }}</dd>
+                </div>
+
+                <div>
                     <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Path</dt>
                     <dd class="mt-1 text-sm text-gray-900 dark:text-white font-mono">{{ pack.path }}</dd>
                 </div>
-                
+
                 <div>
                     <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Types Provided</dt>
                     <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ pack.types|length }}</dd>
