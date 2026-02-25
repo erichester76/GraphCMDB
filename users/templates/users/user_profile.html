@@ -40,19 +40,29 @@
                 <div>
                     <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Staff Status</dt>
                     <dd class="mt-1 text-sm">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                              class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            {% if django_user.is_staff %}Staff{% else %}Regular User{% endif %}
+                        {% if django_user.is_staff %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-white">
+                            Staff
                         </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                            Regular User
+                        </span>
+                        {% endif %}
                     </dd>
                 </div>
                 <div>
                     <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Superuser</dt>
                     <dd class="mt-1 text-sm">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                              class="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                            {% if django_user.is_superuser %}Yes{% else %}No{% endif %}
+                        {% if django_user.is_superuser %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-white">
+                            Yes
                         </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                            No
+                        </span>
+                        {% endif %}
                     </dd>
                 </div>
             </dl>
@@ -100,8 +110,8 @@
             </a>
         </div>
         {% else %}
-        <div class="rounded-lg p-6 bg-yellow-50 dark:bg-yellow-800">
-            <p class="text-sm text-yellow-800 dark:text-yellow-200">
+        <div class="rounded-lg p-6 bg-yellow-100 dark:bg-yellow-900/30">
+            <p class="text-sm text-yellow-900 dark:text-yellow-100">
                 Your user account is not yet linked to a node in the graph database. An administrator can create a User node for you.
             </p>
         </div>
