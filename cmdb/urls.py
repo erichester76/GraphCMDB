@@ -6,9 +6,7 @@ from . import feature_pack_views
 app_name = 'cmdb'  
 
 urlpatterns = [
-    path('types/register/', views.type_register, name='type_register'),
-    
-    path('', views.dashboard, name='dashboard'),
+        path('', views.dashboard, name='dashboard'),
     
     path('', include('cmdb.feature_pack_urls')),
     

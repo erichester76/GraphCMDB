@@ -396,95 +396,6 @@ def build_properties_list_with_relationships(node):
     
     return props_list
 
-@require_http_methods(["GET", "POST"])
-def type_register(request):
-    if request.method == 'GET':
-            types_data = []
-            for label in TypeRegistry.known_labels():
-                meta = TypeRegistry.get_metadata(label)
-                property_names = get_property_names(meta.get('properties', []))
-                types_data.append({
-                    'label': label,
-                    'display_name': meta.get('display_name', '-'),
-                    'required': ', '.join(meta.get('required', [])) or '-',
-                    'properties': ', '.join(property_names) or '-',
-                    'description': meta.get('description', '-'),
-                })
-
-            return render(request, 'cmdb/type_register.html', {
-                'types_data': types_data,
-                'existing_labels': TypeRegistry.known_labels(),
-            })
-
-    success_message = None
-    error_message = None
-
-    if request.method == 'POST':
-        try:
-            label = request.POST.get('label', '').strip()
-            display_name = request.POST.get('display_name', '').strip()
-            description = request.POST.get('description', '').strip()
-            required_str = request.POST.get('required', '')
-            properties_str = request.POST.get('properties', '')
-            category = request.POST.get('category', '').strip()
-            
-            if not label or not display_name:
-                error_message = 'Label and display name are required'
-            elif label in TypeRegistry.known_labels():
-                error_message = f'Type with label "{label}" already exists'
-            elif not category:
-                error_message = 'Category is required'
-            else:
-                required = [p.strip() for p in required_str.split(',') if p.strip()]
-                properties = [p.strip() for p in properties_str.split(',') if p.strip()]
-
-                relationships = {}
-                i = 0
-                while True:
-                    rel_type_key = f'rel_type_{i}'
-                    target_key = f'rel_target_{i}'
-                    if rel_type_key not in request.POST:
-                        break
-                    rel_type = request.POST.get(rel_type_key, '').strip().upper()
-                    target_label = request.POST.get(target_key, '').strip()
-                    if rel_type and target_label:
-                        relationships[rel_type] = {
-                            'target': target_label,
-                            'direction': 'out'
-                        }
-                    i += 1
-
-                    TypeRegistry.register(label, {
-                        'display_name': display_name,
-                        'description': description,
-                        'properties': properties,
-                        'required': required,
-                        'relationships': relationships,
-                        'category': category,
-})
-
-                success_message = f'Type "{label}" registered successfully!'
-        except Exception as e:
-            error_message = str(e)
-
-    types_data = []
-    for label in TypeRegistry.known_labels():
-        meta = TypeRegistry.get_metadata(label)
-        property_names = get_property_names(meta.get('properties', []))
-        types_data.append({
-            'label': label,
-            'display_name': meta.get('display_name', '-'),
-            'required': ', '.join(meta.get('required', [])) or '-',
-            'properties': ', '.join(property_names) or '-',
-            'description': meta.get('description', '-'),
-        })
-
-    return render(request, 'cmdb/type_register.html', {
-        'types_data': types_data,
-        'success': success_message,
-        'error': error_message,
-    })
-    
 def dashboard(request):
     labels = TypeRegistry.known_labels()
     counts = {}
@@ -601,6 +512,7 @@ def nodes_list(request, label):
         'page_obj': page_obj,
         'paginator': paginator,
         'page_size': page_size,
+        'per_page_options': [10, 25, 50, 100, 200],
     }
 
     # If request is from HTMX, return content + header for OOB swap

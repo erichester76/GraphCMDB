@@ -190,6 +190,9 @@
                             <h4 class="text-lg font-medium text-gray-900 dark:text-white truncate">
                                 {{ pack.display_name }}
                             </h4>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                                Author: <a href="mailto:{{ pack.config.author_email|default:'N/A' }}">{{ pack.config.author|default:'N/A' }}</a>
+                            </span>
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                                 v{{ pack.installed_version }}
                             </span>
@@ -217,6 +220,8 @@
                             {% endif %}
                         </p>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                                                        Author: {{ pack.config.author|default:'N/A' }} | Email: {{ pack.config.author_email|default:'N/A' }}
                             Dependencies:
                             {% if pack.config.dependencies %}
                             {{ pack.config.dependencies|join:", " }}
